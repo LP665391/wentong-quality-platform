@@ -340,6 +340,13 @@ async function startDetection(): Promise<void> {
   if (!canStart.value) return;
 
   const api = getApi();
+  
+  // 演示模式：数据已加载，直接展示
+  if (results.value.length > 0) {
+    ElMessage.info('演示数据已就绪，下方查看结果');
+    return;
+  }
+  
   if (!api?.createImageDetectorTask) {
     ElMessage.warning('图像检测功能仅在桌面应用中可用');
     return;
