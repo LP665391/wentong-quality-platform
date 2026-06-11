@@ -7,11 +7,11 @@
         <span>已授权</span>
       </span>
       <span class="statusbar__divider">|</span>
-      <span v-if="appStore.demoMode" class="statusbar__item">
+      <span v-if="isBrowser && appStore.demoMode" class="statusbar__item">
         <span class="status-indicator status-indicator--demo" />
         <span>演示中</span>
       </span>
-      <span v-if="appStore.demoMode" class="statusbar__divider">|</span>
+      <span v-if="isBrowser && appStore.demoMode" class="statusbar__divider">|</span>
       <span class="statusbar__item statusbar__version">
         v{{ appStore.version }}
       </span>
@@ -52,12 +52,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAppStore } from '@/stores/app';
 import { useTaskStore } from '@/stores/task';
 
 const appStore = useAppStore();
 const taskStore = useTaskStore();
+
+/** 仅在浏览器中显示演示指示器 */
+const isBrowser = computed(() => !(window as any).electronAPI && !(window as any).api);
 
 // ---------------------------------------------------------------------------
 // 当前时间（每 30 秒更新）

@@ -10,8 +10,8 @@
       </div>
     </section>
 
-    <!-- 统计面板（演示模式下数字滚动） -->
-    <section class="home-stats">
+    <!-- 统计面板（仅浏览器演示模式） -->
+    <section v-if="isBrowser" class="home-stats">
       <div class="stats-grid">
         <div class="stat-card">
           <span class="stat-card__icon">📊</span>
@@ -37,8 +37,8 @@
       </div>
     </section>
 
-    <!-- 典型场景入口 -->
-    <section class="home-scenarios">
+    <!-- 典型场景入口（仅浏览器演示） -->
+    <section v-if="isBrowser" class="home-scenarios">
       <h2 class="section-title">⚡ 典型场景</h2>
       <p class="section-subtitle">点击直接进入演示，了解 Ai质检平台如何解决实际问题</p>
       <div class="scenario-grid">
@@ -151,6 +151,9 @@ const currentDate = computed(() => {
 
 /** 拖拽悬停状态 */
 const isDragging = ref(false);
+
+/** 是否浏览器环境（仅在浏览器中展示演示功能） */
+const isBrowser = computed(() => !(window as any).electronAPI && !(window as any).api);
 
 /** 动画统计数字 */
 const animatedStats = ref({ rows: 0, issues: 0, reports: 0 });

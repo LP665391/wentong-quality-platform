@@ -50,13 +50,19 @@ export function setupDataValidatorIpc(): void {
         };
       },
     ) => {
+      // 防御性检查：确保 params 和 filePath 存在
+      if (!params || !params.filePath) {
+        throw new Error('缺少必要参数：filePath');
+      }
+      
       const { filePath, options } = params;
 
       // 1) 创建数据库任务记录
       const repo = getRepository();
+      const fileName = filePath.split(/[/\\]/).pop() ?? 'unknown';
       const task = repo.createTask({
         module: 'validator',
-        task_name: `数据校验 - ${filePath.split(/[/\\]/).pop() ?? 'unknown'}`,
+        task_name: `数据校验 - ${fileName}`,
         input_path: filePath,
         config_json: JSON.stringify(options),
       });
