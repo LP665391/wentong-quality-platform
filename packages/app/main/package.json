@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@wentong/utils": "workspace:*",
+    "@wentong/auth": "workspace:*",
     "@wentong/database": "workspace:*",
     "@wentong/data-validator": "workspace:*",
     "@wentong/image-detector": "workspace:*",

@@ -2,6 +2,12 @@ import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-rou
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/activation',
+    name: 'Activation',
+    component: () => import('@/views/Activation.vue'),
+    meta: { title: '软件激活', noAuth: true },
+  },
+  {
     path: '/',
     name: 'Home',
     component: () => import('@/views/Home.vue'),
@@ -54,6 +60,34 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHashHistory(),
   routes,
+});
+
+// ---------------------------------------------------------------------------
+// 全局前置守卫：未激活时只能访问 /activation
+// ---------------------------------------------------------------------------
+
+router.beforeEach(async (to, _from, next) => {
+  // 激活页面总是可以访问
+  if (to.meta.noAuth === true) {
+    next();
+    return;
+  }
+
+  // 检查激活状态（通过 IPC 调用主进程）
+  try {
+    const authStatus = await (window as any).api?.invoke?.('auth:getStatus');
+
+    if (authStatus?.activated || authStatus?.trialActive) {
+      // 已激活或在试用期，放行
+      next();
+    } else {
+      // 未激活，跳转到激活页面
+      next({ name: 'Activation' });
+    }
+  } catch {
+    // IPC 调用失败（可能不在 Electron 环境），放行以便开发调试
+    next();
+  }
 });
 
 export default router;

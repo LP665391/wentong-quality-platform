@@ -6,12 +6,19 @@
  * - 配置读写
  * - 文件/目录选择对话框
  * - 任务 CRUD 操作
+ * - 授权验证
  */
 
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import { getPlatformInfo, getAppVersion, configManager } from '@wentong/utils';
 import { getRepository } from '@wentong/database';
 import type { CreateTaskInput, TaskModule, TaskStatus } from '@wentong/database';
+import {
+  licenseManager,
+  generateMachineId,
+  getTrialInfo,
+  startTrial,
+} from '@wentong/auth';
 import { setupDataValidatorIpc } from './data-validator.js';
 import { setupImageDetectorIpc } from './image-detector.js';
 import { setupPdfProcessorIpc } from './pdf-processor.js';
@@ -169,6 +176,100 @@ export function setupIpcHandlers(): void {
       return repo.updateTaskStatus(taskId, status, errorMessage);
     },
   );
+
+  // -----------------------------------------------------------------------
+  // 授权验证
+  // -----------------------------------------------------------------------
+
+  /**
+   * 获取激活状态
+   */
+  ipcMain.handle('auth:getStatus', () => {
+    const licenseInfo = licenseManager.checkActivation();
+    const trialInfo = getTrialInfo();
+
+    return {
+      activated: licenseInfo !== null,
+      trialActive: trialInfo.isTrial && !trialInfo.expired,
+      licenseInfo,
+      trialInfo,
+    };
+  });
+
+  /**
+   * 获取机器指纹
+   */
+  ipcMain.handle('auth:getMachineId', () => {
+    return generateMachineId();
+  });
+
+  /**
+   * 执行激活
+   *
+   * @param _event  - IPC 事件对象
+   * @param options - { method: 'online' | 'offline', licenseKey?, fileContent? }
+   */
+  ipcMain.handle('auth:activate', async (_event, options: {
+    method: 'online' | 'offline';
+    licenseKey?: string;
+    fileContent?: string;
+  }) => {
+    try {
+      let licenseInfo;
+
+      if (options.method === 'online') {
+        if (!options.licenseKey) {
+          throw new Error('缺少授权码');
+        }
+        licenseInfo = await licenseManager.activateOnline(options.licenseKey);
+      } else if (options.method === 'offline') {
+        if (!options.fileContent) {
+          throw new Error('缺少许可证文件内容');
+        }
+        // 将文件内容写入临时文件，然后调用 activateOffline
+        const fs = await import('node:fs');
+        const path = await import('node:path');
+        const os = await import('node:os');
+        const tmpDir = os.tmpdir();
+        const tmpFile = path.join(tmpDir, `wentong-license-${Date.now()}.dat`);
+        fs.writeFileSync(tmpFile, options.fileContent, 'utf-8');
+        try {
+          licenseInfo = await licenseManager.activateOffline(tmpFile);
+        } finally {
+          // 清理临时文件
+          try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+        }
+      }
+
+      return {
+        success: true,
+        licenseInfo,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message ?? '激活失败',
+      };
+    }
+  });
+
+  /**
+   * 开始试用
+   */
+  ipcMain.handle('auth:startTrial', () => {
+    try {
+      const trialInfo = startTrial();
+      return {
+        success: true,
+        trialInfo,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message ?? '开始试用失败',
+      };
+    }
+  });
 
   // -----------------------------------------------------------------------
   // 数据校验模块 IPC

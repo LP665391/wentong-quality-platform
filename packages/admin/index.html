@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文通Ai质检平台 — 授权管理后台</title>
+  <!-- Element Plus CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <!-- Element Plus CDN -->
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; min-height: 100vh; }
+    .admin-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .admin-header { text-align: center; padding: 32px 0; }
+    .admin-header h1 { font-size: 28px; color: #303133; margin-bottom: 8px; }
+    .admin-header p { color: #909399; }
+    .admin-content { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    .card-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; }
+    .license-result { margin-top: 16px; padding: 16px; background: #f0f9eb; border-radius: 6px; border: 1px solid #b7eb8f; }
+    .license-result pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; margin-top: 8px; }
+    .machine-id-display { font-family: 'SF Mono', 'Fira Code', monospace; background: #f5f7fa; padding: 8px 12px; border-radius: 4px; word-break: break-all; }
+    .record-list { max-width: 1200px; margin: 0 auto; }
+    @media (max-width: 768px) { .admin-content { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="admin-container">
+      <div class="admin-header">
+        <h1>🔑 文通Ai质检平台 — 授权管理后台</h1>
+        <p>生成授权码 · 生成离线许可证 · 管理授权记录</p>
+      </div>
+
+      <div class="admin-content">
+        <!-- 左侧：授权码生成 -->
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-title">
+              <el-icon><Key /></el-icon>
+              <span>授权码生成</span>
+            </div>
+          </template>
+          <el-form :model="licenseForm" label-width="100px">
+            <el-form-item label="客户名称" required>
+              <el-input v-model="licenseForm.customerName" placeholder="如：张三" />
+            </el-form-item>
+            <el-form-item label="公司名称">
+              <el-input v-model="licenseForm.company" placeholder="如：某某科技有限公司" />
+            </el-form-item>
+            <el-form-item label="授权类型">
+              <el-radio-group v-model="licenseForm.type">
+                <el-radio value="permanent">永久授权</el-radio>
+                <el-radio value="trial">试用授权</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="过期日期" v-if="licenseForm.type === 'trial'">
+              <el-date-picker
+                v-model="licenseForm.expireDate"
+                type="date"
+                placeholder="选择过期日期"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="generateLicenseKey">生成授权码</el-button>
+            </el-form-item>
+          </el-form>
+          <div v-if="generatedKey" class="license-result">
+            <strong>授权码：</strong>
+            <pre>{{ generatedKey }}</pre>
+            <el-button size="small" type="success" style="margin-top:8px" @click="copyText(generatedKey)">
+              复制授权码
+            </el-button>
+          </div>
+        </el-card>
+
+        <!-- 右侧：离线许可证生成 -->
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-title">
+              <el-icon><Files /></el-icon>
+              <span>离线许可证生成</span>
+            </div>
+          </template>
+          <el-form :model="offlineForm" label-width="100px">
+            <el-form-item label="机器指纹" required>
+              <el-input
+                v-model="offlineForm.machineId"
+                placeholder="粘贴客户端机器指纹 (XXXX-XXXX-...)"
+                @input="offlineForm.machineId = offlineForm.machineId.toUpperCase()"
+              />
+            </el-form-item>
+            <el-form-item label="客户名称" required>
+              <el-input v-model="offlineForm.customerName" placeholder="如：张三" />
+            </el-form-item>
+            <el-form-item label="公司名称">
+              <el-input v-model="offlineForm.company" placeholder="如：某某科技有限公司" />
+            </el-form-item>
+            <el-form-item label="授权类型">
+              <el-radio-group v-model="offlineForm.type">
+                <el-radio value="permanent">永久授权</el-radio>
+                <el-radio value="trial">试用授权</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="过期日期" v-if="offlineForm.type === 'trial'">
+              <el-date-picker
+                v-model="offlineForm.expireDate"
+                type="date"
+                placeholder="选择过期日期"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="generateOfflineLicense">生成并下载</el-button>
+            </el-form-item>
+          </el-form>
+          <div v-if="offlineGenerated" class="license-result">
+            <strong>许可证已生成！</strong>
+            <p style="margin-top:4px">许可证 ID: {{ offlineResult?.content?.licenseId }}</p>
+            <p>客户: {{ offlineResult?.content?.customerName }}</p>
+            <p>类型: {{ offlineResult?.content?.type === 'permanent' ? '永久授权' : '试用授权' }}</p>
+            <el-tag type="success">文件已自动下载</el-tag>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 授权记录列表 -->
+      <el-card class="record-list" shadow="hover">
+        <template #header>
+          <div class="card-title">
+            <el-icon><List /></el-icon>
+            <span>授权记录 ({{ records.length }})</span>
+            <el-button size="small" style="margin-left:auto" @click="clearRecords">清空记录</el-button>
+          </div>
+        </template>
+        <el-table :data="records" empty-text="暂无授权记录">
+          <el-table-column prop="licenseId" label="许可证 ID" min-width="180" />
+          <el-table-column prop="customerName" label="客户名称" width="120" />
+          <el-table-column prop="company" label="公司" width="160" />
+          <el-table-column label="类型" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.type === 'permanent' ? 'success' : 'warning'" size="small">
+                {{ row.type === 'permanent' ? '永久' : '试用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="machineId" label="机器指纹" min-width="200">
+            <template #default="{ row }">
+              <span class="machine-id-display">{{ row.machineId }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="issueDate" label="签发日期" width="120" />
+          <el-table-column prop="expireDate" label="过期日期" width="120">
+            <template #default="{ row }">
+              {{ row.expireDate || '永久有效' }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // HMAC-SHA256 签名（与客户端 packages/core/auth/src/crypto.ts 共享密钥）
+    // =========================================================================
+    // 注意：此处使用 Web Crypto API 实现 HMAC-SHA256
+    // 共享密钥与 crypto.ts 中的 SECRET_KEY_BASE64 相同
+
+    const SECRET_KEY_BASE64 = 'V2VuVG9uZ1F1YWxpdHlQbGF0Zm9ybVNlY3JldEtleTIwMjU=';
+
+    /**
+     * Base64 解码为 ArrayBuffer
+     */
+    function base64ToArrayBuffer(base64) {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    /**
+     * ArrayBuffer 转 Base64
+     */
+    function arrayBufferToBase64(buffer) {
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+
+    /**
+     * HMAC-SHA256 签名
+     */
+    async function hmacSign(content) {
+      const keyBuffer = base64ToArrayBuffer(SECRET_KEY_BASE64);
+      const key = await crypto.subtle.importKey(
+        'raw',
+        keyBuffer,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      const encoder = new TextEncoder();
+      const data = encoder.encode(content);
+      const signature = await crypto.subtle.sign('HMAC', key, data);
+      return arrayBufferToBase64(signature);
+    }
+
+    /**
+     * 生成唯一许可证 ID
+     */
+    function generateLicenseId() {
+      const timestamp = Date.now().toString(36).toUpperCase();
+      const random = Math.random().toString(36).substring(2, 10).toUpperCase();
+      return `WT-${timestamp}-${random}`;
+    }
+
+    // =========================================================================
+    // Vue 应用
+    // =========================================================================
+
+    const { createApp, ref, onMounted } = Vue;
+
+    const app = createApp({
+      setup() {
+        // 授权码生成表单
+        const licenseForm = ref({
+          customerName: '',
+          company: '',
+          type: 'permanent',
+          expireDate: '',
+        });
+        const generatedKey = ref('');
+
+        // 离线许可证生成表单
+        const offlineForm = ref({
+          machineId: '',
+          customerName: '',
+          company: '',
+          type: 'permanent',
+          expireDate: '',
+        });
+        const offlineGenerated = ref(false);
+        const offlineResult = ref(null);
+
+        // 授权记录
+        const records = ref([]);
+
+        // 从 localStorage 加载记录
+        onMounted(() => {
+          try {
+            const stored = localStorage.getItem('wentong-license-records');
+            if (stored) {
+              records.value = JSON.parse(stored);
+            }
+          } catch { /* ignore */ }
+        });
+
+        // 保存记录到 localStorage
+        function saveRecords() {
+          localStorage.setItem('wentong-license-records', JSON.stringify(records.value));
+        }
+
+        // 生成授权码
+        async function generateLicenseKey() {
+          if (!licenseForm.value.customerName.trim()) {
+            ElementPlus.ElMessage.warning('请输入客户名称');
+            return;
+          }
+
+          // 生成授权码 (格式: WT-{timestamp}-{random})
+          const key = generateLicenseId();
+          generatedKey.value = key;
+
+          // 保存记录
+          const record = {
+            licenseId: key,
+            customerName: licenseForm.value.customerName,
+            company: licenseForm.value.company || '-',
+            type: licenseForm.value.type,
+            machineId: '- (联网激活无需机器指纹)',
+            issueDate: new Date().toISOString().split('T')[0],
+            expireDate: licenseForm.value.type === 'trial' ? (licenseForm.value.expireDate || '') : '',
+            generatedAt: new Date().toISOString(),
+          };
+          records.value.unshift(record);
+          saveRecords();
+
+          ElementPlus.ElMessage.success('授权码已生成！');
+        }
+
+        // 生成离线许可证
+        async function generateOfflineLicense() {
+          if (!offlineForm.value.machineId.trim()) {
+            ElementPlus.ElMessage.warning('请输入机器指纹');
+            return;
+          }
+          if (!offlineForm.value.customerName.trim()) {
+            ElementPlus.ElMessage.warning('请输入客户名称');
+            return;
+          }
+
+          const machineId = offlineForm.value.machineId.replace(/\s/g, '');
+
+          const content = {
+            licenseId: generateLicenseId(),
+            customerName: offlineForm.value.customerName,
+            company: offlineForm.value.company || '',
+            type: offlineForm.value.type,
+            machineId: machineId,
+            issueDate: new Date().toISOString().split('T')[0],
+            ...(offlineForm.value.type === 'trial' && offlineForm.value.expireDate
+              ? { expireDate: offlineForm.value.expireDate }
+              : {}),
+          };
+
+          const signature = await hmacSign(JSON.stringify(content));
+          const licenseFile = { content, signature };
+
+          offlineResult.value = licenseFile;
+          offlineGenerated.value = true;
+
+          // 保存记录
+          const record = {
+            licenseId: content.licenseId,
+            customerName: content.customerName,
+            company: content.company || '-',
+            type: content.type,
+            machineId: content.machineId,
+            issueDate: content.issueDate,
+            expireDate: content.expireDate || '',
+            generatedAt: new Date().toISOString(),
+          };
+          records.value.unshift(record);
+          saveRecords();
+
+          // 触发下载
+          const blob = new Blob([JSON.stringify(licenseFile, null, 2)], { type: 'application/octet-stream' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `wentong-license-${content.licenseId}.dat`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          ElementPlus.ElMessage.success('许可证文件已生成并下载！');
+        }
+
+        // 复制文本
+        function copyText(text) {
+          navigator.clipboard.writeText(text).then(() => {
+            ElementPlus.ElMessage.success('已复制到剪贴板');
+          }).catch(() => {
+            ElementPlus.ElMessage.error('复制失败，请手动复制');
+          });
+        }
+
+        // 清空记录
+        function clearRecords() {
+          ElementPlus.ElMessageBox.confirm('确定清空所有授权记录吗？', '确认', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+          }).then(() => {
+            records.value = [];
+            localStorage.removeItem('wentong-license-records');
+            ElementPlus.ElMessage.success('记录已清空');
+          }).catch(() => {});
+        }
+
+        return {
+          licenseForm,
+          generatedKey,
+          offlineForm,
+          offlineGenerated,
+          offlineResult,
+          records,
+          generateLicenseKey,
+          generateOfflineLicense,
+          copyText,
+          clearRecords,
+        };
+      },
+    });
+
+    // 注册 Element Plus 图标
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+      app.component(key, component);
+    }
+
+    app.use(ElementPlus);
+    app.mount('#app');
+  </script>
+</body>
+</html>

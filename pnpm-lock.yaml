@@ -17,6 +17,9 @@ importers:
 
   packages/app/main:
     dependencies:
+      '@wentong/auth':
+        specifier: workspace:*
+        version: link:../../core/auth
       '@wentong/data-validator':
         specifier: workspace:*
         version: link:../../modules/data-validator
@@ -79,6 +82,22 @@ importers:
       vue-tsc:
         specifier: ^2.0.0
         version: 2.2.12(typescript@5.9.3)
+
+  packages/core/auth:
+    dependencies:
+      '@wentong/utils':
+        specifier: workspace:*
+        version: link:../utils
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.4.0
+        version: 1.6.1(@types/node@20.19.43)
 
   packages/core/database:
     dependencies:
