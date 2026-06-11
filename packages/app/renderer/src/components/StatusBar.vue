@@ -1,23 +1,74 @@
 <template>
   <footer class="statusbar">
+    <!-- 左侧：授权状态 + 版本号 -->
     <div class="statusbar__left">
-      <span class="statusbar__item">就绪</span>
+      <span class="statusbar__item">
+        <span class="status-indicator status-indicator--active" />
+        <span>已授权</span>
+      </span>
+      <span class="statusbar__divider">|</span>
+      <span class="statusbar__item statusbar__version">
+        v{{ appStore.version }}
+      </span>
     </div>
+
+    <!-- 中间：最近任务数量 -->
+    <div class="statusbar__center">
+      <span
+        v-if="taskStore.runningTasks.length > 0"
+        class="statusbar__item statusbar__task-badge"
+      >
+        🔄 {{ taskStore.runningTasks.length }} 个任务运行中
+      </span>
+      <span class="statusbar__item">
+        📋 最近 {{ taskStore.recentTasks.length }} 条任务
+      </span>
+    </div>
+
+    <!-- 右侧：当前时间 -->
     <div class="statusbar__right">
-      <span class="statusbar__item">{{ version }}</span>
+      <span class="statusbar__item statusbar__time">
+        {{ currentTime }}
+      </span>
     </div>
   </footer>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useAppStore } from '@/stores/app';
-import { storeToRefs } from 'pinia';
+import { useTaskStore } from '@/stores/task';
 
 const appStore = useAppStore();
-const { version } = storeToRefs(appStore);
+const taskStore = useTaskStore();
 
-// 占位组件 — 后续任务会实现完整的状态栏
-// 包含：连接状态指示器、任务统计、版本信息、时钟
+// ---------------------------------------------------------------------------
+// 当前时间（每 30 秒更新）
+// ---------------------------------------------------------------------------
+function formatTime(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${y}/${m}/${d} ${h}:${min}`;
+}
+
+const currentTime = ref(formatTime(new Date()));
+let timer: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+  timer = setInterval(() => {
+    currentTime.value = formatTime(new Date());
+  }, 30_000);
+});
+
+onUnmounted(() => {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+});
 </script>
 
 <style scoped>
@@ -33,18 +84,64 @@ const { version } = storeToRefs(appStore);
   color: var(--text-secondary);
   flex-shrink: 0;
   gap: 16px;
+  user-select: none;
 }
 
+/* ---- 左 / 中 / 右 容器 ---- */
 .statusbar__left,
+.statusbar__center,
 .statusbar__right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  white-space: nowrap;
 }
 
+.statusbar__center {
+  flex: 1;
+  justify-content: center;
+}
+
+/* ---- 条目 ---- */
 .statusbar__item {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.statusbar__divider {
+  color: var(--text-placeholder);
+  margin: 0 2px;
+}
+
+/* ---- 授权指示灯 ---- */
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c0c4cc;
+  flex-shrink: 0;
+}
+
+.status-indicator--active {
+  background: #67c23a;
+  box-shadow: 0 0 4px rgba(103, 194, 58, 0.5);
+}
+
+/* ---- 版本号 ---- */
+.statusbar__version {
+  color: var(--text-placeholder);
+}
+
+/* ---- 任务徽章 ---- */
+.statusbar__task-badge {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* ---- 时间 ---- */
+.statusbar__time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
 }
 </style>
