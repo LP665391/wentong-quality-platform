@@ -319,7 +319,7 @@ export class TaskRepository {
       params.push(module);
     }
 
-    sql += ' ORDER BY created_at DESC LIMIT ?';
+    sql += ' ORDER BY created_at DESC, id DESC LIMIT ?';
     params.push(limit);
 
     const rows = this.db.prepare(sql).all(...params) as TaskRow[];
