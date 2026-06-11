@@ -95,7 +95,6 @@ export function createMainWindow(): BrowserWindow {
   // 加载内容
   if (isDev()) {
     mainWindow.loadURL(DEV_SERVER_URL);
-    mainWindow.webContents.openDevTools();
   } else {
     // 生产环境加载 renderer 构建产物
     const rendererPath = path.join(__dirname, '..', '..', 'renderer', 'dist', 'index.html');
