@@ -14,7 +14,6 @@
     "pack:mac": "pnpm build:all && electron-builder --mac",
     "pack:win": "pnpm build:all && electron-builder --win",
     "pack:linux": "pnpm build:all && electron-builder --linux",
-    "postinstall": "electron-builder install-app-deps",
     "lint": "eslint packages --ext .ts,.vue",
     "clean": "pnpm -r exec rm -rf dist node_modules"
   },

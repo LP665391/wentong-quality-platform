@@ -64,7 +64,7 @@ export async function hashFile(
   const stream = fs.createReadStream(filePath);
 
   return new Promise<HashResult>((resolve, reject) => {
-    stream.on('data', (chunk: Buffer) => {
+    stream.on('data', (chunk) => {
       hash.update(chunk);
     });
 
