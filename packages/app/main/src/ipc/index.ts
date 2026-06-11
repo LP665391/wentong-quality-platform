@@ -13,6 +13,7 @@ import { getPlatformInfo, getAppVersion, configManager } from '@wentong/utils';
 import { getRepository } from '@wentong/database';
 import type { CreateTaskInput, TaskModule, TaskStatus } from '@wentong/database';
 import { setupDataValidatorIpc } from './data-validator.js';
+import { setupImageDetectorIpc } from './image-detector.js';
 
 // ---------------------------------------------------------------------------
 // Handler 注册
@@ -170,4 +171,10 @@ export function setupIpcHandlers(): void {
   // -----------------------------------------------------------------------
 
   setupDataValidatorIpc();
+
+  // -----------------------------------------------------------------------
+  // 图像检测模块 IPC
+  // -----------------------------------------------------------------------
+
+  setupImageDetectorIpc();
 }

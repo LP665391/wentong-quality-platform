@@ -23,6 +23,9 @@ importers:
       '@wentong/database':
         specifier: workspace:*
         version: link:../../core/database
+      '@wentong/image-detector':
+        specifier: workspace:*
+        version: link:../../modules/image-detector
       '@wentong/utils':
         specifier: workspace:*
         version: link:../../core/utils
