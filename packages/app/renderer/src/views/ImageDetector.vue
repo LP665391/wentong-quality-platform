@@ -25,7 +25,7 @@
             <el-button type="primary" @click="selectDir" :disabled="running">
               浏览
             </el-button>
-            <el-button type="success" @click="loadDemoImages" :disabled="running" plain>
+            <el-button type="success" v-if="isBrowser" @click="loadDemoImages" :disabled="running" plain>
               🎯 加载演示图片
             </el-button>
           </div>
@@ -248,6 +248,9 @@ const concurrency = ref(4);
 const threshold = ref(50);
 const running = ref(false);
 const exporting = ref(false);
+
+// 是否浏览器环境（非 Electron）
+const isBrowser = computed(() => !(window as any).electronAPI && !(window as any).api);
 
 const progress = ref<{
   current: number;

@@ -24,7 +24,7 @@
             <el-button type="primary" @click="selectFile" :disabled="validating">
               浏览
             </el-button>
-            <el-button type="success" @click="loadDemoData" :disabled="validating" plain>
+            <el-button type="success" v-if="isBrowser" @click="loadDemoData" :disabled="validating" plain>
               🎯 加载演示数据
             </el-button>
           </div>
@@ -299,6 +299,7 @@ const outputPath = ref('');
 const preset = ref<'standard' | 'strict' | 'loose'>('standard');
 const validating = ref(false);
 const exporting = ref(false);
+const isBrowser = computed(() => !(window as any).electronAPI && !(window as any).api);
 const exportFormat = ref<'excel' | 'json' | 'csv' | ''>('');
 
 const progressPercent = ref(0);
