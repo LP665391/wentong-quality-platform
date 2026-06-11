@@ -17,6 +17,9 @@ importers:
 
   packages/app/main:
     dependencies:
+      '@wentong/data-validator':
+        specifier: workspace:*
+        version: link:../../modules/data-validator
       '@wentong/database':
         specifier: workspace:*
         version: link:../../core/database

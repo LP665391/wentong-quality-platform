@@ -12,6 +12,7 @@ import { ipcMain, dialog, BrowserWindow } from 'electron';
 import { getPlatformInfo, getAppVersion, configManager } from '@wentong/utils';
 import { getRepository } from '@wentong/database';
 import type { CreateTaskInput, TaskModule, TaskStatus } from '@wentong/database';
+import { setupDataValidatorIpc } from './data-validator.js';
 
 // ---------------------------------------------------------------------------
 // Handler 注册
@@ -163,4 +164,10 @@ export function setupIpcHandlers(): void {
       return repo.updateTaskStatus(taskId, status, errorMessage);
     },
   );
+
+  // -----------------------------------------------------------------------
+  // 数据校验模块 IPC
+  // -----------------------------------------------------------------------
+
+  setupDataValidatorIpc();
 }

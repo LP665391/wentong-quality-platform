@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@wentong/utils": "workspace:*",
-    "@wentong/database": "workspace:*"
+    "@wentong/database": "workspace:*",
+    "@wentong/data-validator": "workspace:*"
   },
   "devDependencies": {
     "electron": "^28.0.0",

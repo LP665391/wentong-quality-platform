@@ -34,3 +34,5 @@ export type {
   ProgressCallback,
   ProgressStatus,
 } from './engine.js';
+
+export { Reporter } from './reporter.js';
