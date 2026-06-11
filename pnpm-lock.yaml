@@ -26,6 +26,12 @@ importers:
       '@wentong/image-detector':
         specifier: workspace:*
         version: link:../../modules/image-detector
+      '@wentong/md5-checker':
+        specifier: workspace:*
+        version: link:../../modules/md5-checker
+      '@wentong/pdf-processor':
+        specifier: workspace:*
+        version: link:../../modules/pdf-processor
       '@wentong/utils':
         specifier: workspace:*
         version: link:../../core/utils
@@ -132,6 +138,18 @@ importers:
       sharp:
         specifier: ^0.33.0
         version: 0.33.5
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.4.0
+        version: 1.6.1(@types/node@20.19.43)
+
+  packages/modules/md5-checker:
     devDependencies:
       '@types/node':
         specifier: ^20.11.0

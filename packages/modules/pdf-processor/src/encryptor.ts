@@ -1,4 +1,4 @@
-import { PDFDocument } from 'pdf-lib';
+import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 
 export interface EncryptOptions {
@@ -16,8 +16,15 @@ export interface EncryptOptions {
 
 /**
  * PDF 加密/解密器
+ *
+ * 由于 pdf-lib v1.17 不原生支持 PDF 加密标准，
+ * 此处使用 AES-256-CBC 对整个 PDF 文件进行加密，
+ * 并在加密数据前添加简单的 magic header 用于识别。
  */
 export class PdfEncryptor {
+  private static readonly ALGORITHM = 'aes-256-cbc';
+  private static readonly MAGIC = Buffer.from('WTENC'); // 文通加密标识
+
   /**
    * 加密 PDF 文件
    * @param filePath - 源 PDF 文件路径
@@ -27,7 +34,7 @@ export class PdfEncryptor {
   async encrypt(
     filePath: string,
     outputPath: string,
-    options: EncryptOptions
+    options: EncryptOptions,
   ): Promise<void> {
     if (!fs.existsSync(filePath)) {
       throw new Error(`文件不存在: ${filePath}`);
@@ -38,28 +45,36 @@ export class PdfEncryptor {
     }
 
     const fileBytes = fs.readFileSync(filePath);
-    const doc = await PDFDocument.load(fileBytes.buffer.slice(
-      fileBytes.byteOffset,
-      fileBytes.byteOffset + fileBytes.byteLength
-    ));
 
-    doc.setTitle(doc.getTitle() ?? '');
+    // 使用 SHA-256 从密码派生 32 字节密钥
+    const key = crypto.createHash('sha256').update(options.userPassword).digest();
 
-    const encryptedBytes = await doc.save({
-      userPassword: options.userPassword,
+    // 生成随机 IV
+    const iv = crypto.randomBytes(16);
+
+    // AES-256-CBC 加密
+    const cipher = crypto.createCipheriv(PdfEncryptor.ALGORITHM, key, iv);
+    const encrypted = Buffer.concat([cipher.update(fileBytes), cipher.final()]);
+
+    // 写入格式: MAGIC (5B) + IV (16B) + encrypted data
+    const output = Buffer.concat([PdfEncryptor.MAGIC, iv, encrypted]);
+
+    // 同时保存权限配置到文件末尾（JSON）
+    const permsJson = JSON.stringify({
+      canPrint: options.canPrint ?? false,
+      canModify: options.canModify ?? false,
+      canCopy: options.canCopy ?? false,
       ownerPassword: options.ownerPassword ?? options.userPassword,
-      permissions: {
-        printing: options.canPrint ? 'highResolution' : 'none',
-        modifying: options.canModify ?? false,
-        copying: options.canCopy ?? false,
-      },
     });
+    const permsBuffer = Buffer.from(permsJson, 'utf-8');
+    const permsLengthBuffer = Buffer.alloc(4);
+    permsLengthBuffer.writeUInt32BE(permsBuffer.length, 0);
 
-    fs.writeFileSync(outputPath, Buffer.from(encryptedBytes));
+    fs.writeFileSync(outputPath, Buffer.concat([output, permsBuffer, permsLengthBuffer]));
   }
 
   /**
-   * 解密 PDF 文件（通过密码加载后重新保存为无密码版本）
+   * 解密 PDF 文件
    * @param filePath - 加密的 PDF 文件路径
    * @param password - 解密密码
    * @param outputPath - 解密后输出路径
@@ -67,7 +82,7 @@ export class PdfEncryptor {
   async decrypt(
     filePath: string,
     password: string,
-    outputPath: string
+    outputPath: string,
   ): Promise<void> {
     if (!fs.existsSync(filePath)) {
       throw new Error(`文件不存在: ${filePath}`);
@@ -79,29 +94,29 @@ export class PdfEncryptor {
 
     const fileBytes = fs.readFileSync(filePath);
 
-    let doc: PDFDocument;
-    try {
-      doc = await PDFDocument.load(fileBytes.buffer.slice(
-        fileBytes.byteOffset,
-        fileBytes.byteOffset + fileBytes.byteLength
-      ), {
-        ignoreEncryption: false,
-      });
-    } catch {
-      // pdf-lib 加载加密文档时如果密码错误会在后续 save 时报错
-      // 这里尝试加载，如果失败则可能是格式问题
-      doc = await PDFDocument.load(fileBytes.buffer.slice(
-        fileBytes.byteOffset,
-        fileBytes.byteOffset + fileBytes.byteLength
-      ));
+    // 读取权限长度（最后4字节）
+    const permsLength = fileBytes.readUInt32BE(fileBytes.length - 4);
+    const encryptedData = fileBytes.subarray(0, fileBytes.length - permsLength - 4);
+
+    // 检查 magic header
+    const magic = encryptedData.subarray(0, 5);
+    if (!magic.equals(PdfEncryptor.MAGIC)) {
+      throw new Error('文件不是有效的加密格式，或密码不正确');
     }
 
-    // 保存为无密码版本
-    const decryptedBytes = await doc.save({
-      userPassword: undefined,
-      ownerPassword: undefined,
-    });
+    // 读取 IV（magic 之后的 16 字节）
+    const iv = encryptedData.subarray(5, 21);
+    const ciphertext = encryptedData.subarray(21);
 
-    fs.writeFileSync(outputPath, Buffer.from(decryptedBytes));
+    // 从密码派生密钥
+    const key = crypto.createHash('sha256').update(password).digest();
+
+    try {
+      const decipher = crypto.createDecipheriv(PdfEncryptor.ALGORITHM, key, iv);
+      const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+      fs.writeFileSync(outputPath, decrypted);
+    } catch {
+      throw new Error('解密失败：密码错误或文件已损坏');
+    }
   }
 }

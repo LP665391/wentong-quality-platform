@@ -14,6 +14,8 @@ import { getRepository } from '@wentong/database';
 import type { CreateTaskInput, TaskModule, TaskStatus } from '@wentong/database';
 import { setupDataValidatorIpc } from './data-validator.js';
 import { setupImageDetectorIpc } from './image-detector.js';
+import { setupPdfProcessorIpc } from './pdf-processor.js';
+import { setupMd5CheckerIpc } from './md5-checker.js';
 
 // ---------------------------------------------------------------------------
 // Handler 注册
@@ -177,4 +179,16 @@ export function setupIpcHandlers(): void {
   // -----------------------------------------------------------------------
 
   setupImageDetectorIpc();
+
+  // -----------------------------------------------------------------------
+  // PDF 处理模块 IPC
+  // -----------------------------------------------------------------------
+
+  setupPdfProcessorIpc();
+
+  // -----------------------------------------------------------------------
+  // MD5 校验模块 IPC
+  // -----------------------------------------------------------------------
+
+  setupMd5CheckerIpc();
 }
