@@ -1,5 +1,5 @@
 appId: com.wentong.ai-quality-inspector
-productName: 文通Ai质检平台
+productName: Ai质检平台
 copyright: Copyright © 2026 WenTong
 
 directories:
@@ -41,7 +41,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: 文通Ai质检平台
+  shortcutName: Ai质检平台
 
 linux:
   target:

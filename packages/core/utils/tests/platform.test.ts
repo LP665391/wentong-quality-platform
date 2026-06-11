@@ -42,8 +42,8 @@ describe('platform 模块', () => {
   });
 
   describe('getAppName()', () => {
-    it('应该返回应用名称 "文通Ai质检平台"', () => {
-      expect(getAppName()).toBe('文通Ai质检平台');
+    it('应该返回应用名称 "Ai质检平台"', () => {
+      expect(getAppName()).toBe('Ai质检平台');
     });
   });
 

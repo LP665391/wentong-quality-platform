@@ -2,7 +2,7 @@
   <div class="home">
     <!-- 顶部标题 -->
     <header class="home-header">
-      <h1 class="home-title">文通Ai质检平台</h1>
+      <h1 class="home-title">Ai质检平台</h1>
       <p class="home-subtitle">数据质量管理工具集</p>
     </header>
 

@@ -50,7 +50,7 @@ export function getPlatformInfo(): PlatformInfo {
  * 获取应用名称
  */
 export function getAppName(): string {
-  return '文通Ai质检平台';
+  return 'Ai质检平台';
 }
 
 /**

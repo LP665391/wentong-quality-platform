@@ -7,7 +7,7 @@
     <div class="sidebar__logo">
       <span class="sidebar__logo-icon">📊</span>
       <transition name="fade">
-        <span v-if="!sidebarCollapsed" class="sidebar__logo-text">文通质检</span>
+        <span v-if="!sidebarCollapsed" class="sidebar__logo-text">Ai质检</span>
       </transition>
     </div>
 

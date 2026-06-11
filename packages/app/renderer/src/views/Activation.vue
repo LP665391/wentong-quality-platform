@@ -1,7 +1,7 @@
 <template>
   <div class="activation-page">
     <div class="activation-header">
-      <h1>文通Ai质检平台 — 软件授权激活</h1>
+      <h1>Ai质检平台 — 软件授权激活</h1>
       <p class="subtitle">请选择激活方式以开始使用</p>
     </div>
 
