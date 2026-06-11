@@ -15,7 +15,9 @@
     "@wentong/data-validator": "workspace:*",
     "@wentong/image-detector": "workspace:*",
     "@wentong/pdf-processor": "workspace:*",
-    "@wentong/md5-checker": "workspace:*"
+    "@wentong/md5-checker": "workspace:*",
+    "@wentong/metadata-encap": "workspace:*",
+    "@wentong/doc-manager": "workspace:*"
   },
   "devDependencies": {
     "electron": "^28.0.0",
