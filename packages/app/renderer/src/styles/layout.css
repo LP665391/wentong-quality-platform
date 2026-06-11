@@ -1,0 +1,203 @@
+/* ==========================================================================
+   全局布局样式 — 文通Ai质检平台
+   Plan-2 步骤 1：全局布局 CSS 变量、重置、工具类
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   CSS 变量
+   -------------------------------------------------------------------------- */
+:root {
+  /* ---- 布局尺寸 ---- */
+  --sidebar-width: 220px;
+  --sidebar-collapsed-width: 64px;
+  --titlebar-height: 38px;
+  --statusbar-height: 28px;
+
+  /* ---- 主题色 ---- */
+  --color-primary: #409eff;
+  --color-primary-light: #66b1ff;
+  --color-primary-dark: #3a8ee6;
+  --color-success: #67c23a;
+  --color-warning: #e6a23c;
+  --color-danger: #f56c6c;
+  --color-info: #909399;
+
+  /* ---- 中性色 ---- */
+  --bg-base: #f5f7fa;
+  --bg-sidebar: #1d1e2c;
+  --bg-titlebar: #2b2d3a;
+  --bg-statusbar: #f0f2f5;
+  --bg-card: #ffffff;
+  --bg-hover: #f0f2f5;
+
+  /* ---- 边框 ---- */
+  --border-color: #e4e7ed;
+  --border-color-light: #ebeef5;
+  --border-radius: 8px;
+  --border-radius-sm: 4px;
+
+  /* ---- 阴影 ---- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+  /* ---- 文字 ---- */
+  --text-primary: #303133;
+  --text-regular: #606266;
+  --text-secondary: #909399;
+  --text-placeholder: #c0c4cc;
+  --text-inverse: #ffffff;
+
+  /* ---- 过渡 ---- */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.35s ease;
+
+  /* ---- z-index ---- */
+  --z-sidebar: 100;
+  --z-titlebar: 200;
+  --z-overlay: 500;
+  --z-modal: 1000;
+}
+
+/* --------------------------------------------------------------------------
+   全局重置
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
+    'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
+
+/* --------------------------------------------------------------------------
+   滚动条样式
+   -------------------------------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(144, 147, 153, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(144, 147, 153, 0.5);
+}
+
+/* --------------------------------------------------------------------------
+   Electron drag-region (macOS 标题栏拖拽区)
+   -------------------------------------------------------------------------- */
+.drag-region {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* --------------------------------------------------------------------------
+   wt-card 通用卡片样式
+   -------------------------------------------------------------------------- */
+.wt-card {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  padding: 16px;
+  border: 1px solid var(--border-color-light);
+  transition: box-shadow var(--transition-fast);
+}
+
+.wt-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.wt-card--no-padding {
+  padding: 0;
+}
+
+.wt-card--bordered {
+  border-color: var(--border-color);
+}
+
+/* --------------------------------------------------------------------------
+   fade 过渡动画
+   -------------------------------------------------------------------------- */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity var(--transition-normal);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* --------------------------------------------------------------------------
+   布局框架
+   -------------------------------------------------------------------------- */
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* macOS TitleBar 占位 */
+.app-wrapper.is-mac {
+  /* TitleBar 由子元素撑开，高度 = --titlebar-height */
+}
+
+/* 主体区域：侧边栏 + 主内容 */
+.app-container {
+  display: flex;
+  flex: 1;
+  min-height: 0; /* 防止 flex 子元素溢出 */
+  overflow: hidden;
+}
+
+/* 主内容区域 */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  background: var(--bg-base);
+}
+
+/* --------------------------------------------------------------------------
+   响应式微调
+   -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-width: 200px;
+  }
+
+  .main-content {
+    padding: 16px;
+  }
+}
