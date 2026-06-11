@@ -25,8 +25,20 @@
       </span>
     </div>
 
-    <!-- 右侧：当前时间 -->
+    <!-- 右侧：公司信息 + 当前时间 -->
     <div class="statusbar__right">
+      <span class="statusbar__item statusbar__company">
+        © 连云港文安档案科技有限公司
+      </span>
+      <span class="statusbar__divider">|</span>
+      <span class="statusbar__item statusbar__phone">
+        183 5281 1015
+      </span>
+      <span class="statusbar__divider">|</span>
+      <span class="statusbar__item statusbar__chairman">
+        董事长 刘婷
+      </span>
+      <span class="statusbar__divider">|</span>
       <span class="statusbar__item statusbar__time">
         {{ currentTime }}
       </span>
@@ -102,6 +114,10 @@ onUnmounted(() => {
   justify-content: center;
 }
 
+.statusbar__right {
+  flex-shrink: 0;
+}
+
 /* ---- 条目 ---- */
 .statusbar__item {
   display: flex;
@@ -137,6 +153,18 @@ onUnmounted(() => {
 .statusbar__task-badge {
   color: var(--color-primary);
   font-weight: 500;
+}
+
+/* ---- 公司信息 ---- */
+.statusbar__company {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.statusbar__phone,
+.statusbar__chairman {
+  color: var(--text-hint);
+  font-size: 11px;
 }
 
 /* ---- 时间 ---- */
