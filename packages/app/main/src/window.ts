@@ -74,7 +74,7 @@ export function createMainWindow(): BrowserWindow {
     minWidth: MIN_WIDTH,
     minHeight: MIN_HEIGHT,
     title: WINDOW_TITLE,
-    show: false, // ready-to-show 后再显示，避免白屏闪烁
+    show: true, // 开发模式直接显示，便于调试
 
     // macOS 无边框样式，保留红绿灯按钮
     ...(isMac
