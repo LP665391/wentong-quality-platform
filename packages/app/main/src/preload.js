@@ -16,20 +16,33 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
 
   // 数据校验
+  createValidatorTask: (params) => ipcRenderer.invoke('validator:create', params.filePath, params.options),
   createValidationTask: (filePath, options) => ipcRenderer.invoke('validator:create', filePath, options),
+  runValidator: (params) => ipcRenderer.invoke('validator:run', params.taskId, params.filePath),
   runValidation: (taskId, filePath) => ipcRenderer.invoke('validator:run', taskId, filePath),
+  cancelValidator: (params) => ipcRenderer.invoke('validator:cancel', params.taskId),
   cancelValidation: (taskId) => ipcRenderer.invoke('validator:cancel', taskId),
   onValidatorProgress: (callback) => {
     ipcRenderer.on('validator:progress', (_event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('validator:progress');
   },
+  exportValidatorReport: (params) => ipcRenderer.invoke('validator:export', params.taskId, params.format),
   exportValidationReport: (taskId, format) => ipcRenderer.invoke('validator:export', taskId, format),
 
   // 图像检测
+  createImageDetectorTask: (params) => ipcRenderer.invoke('image-detector:create', params.dirPath, params.modelId, params.options),
   createImageTask: (dirPath, modelId, options) => ipcRenderer.invoke('image-detector:create', dirPath, modelId, options),
+  runImageDetector: (params) => ipcRenderer.invoke('image-detector:run', params.taskId, params.dirPath),
   runImageDetection: (taskId, dirPath) => ipcRenderer.invoke('image-detector:run', taskId, dirPath),
+  cancelImageDetector: (params) => ipcRenderer.invoke('image-detector:cancel', params.taskId),
   cancelImageDetection: (taskId) => ipcRenderer.invoke('image-detector:cancel', taskId),
+  onImageDetectorProgress: (callback) => {
+    ipcRenderer.on('image-detector:progress', (_event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('image-detector:progress');
+  },
   onImageProgress: (callback) => {
     ipcRenderer.on('image-detector:progress', (_event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('image-detector:progress');
   },
   getImageResults: (taskId) => ipcRenderer.invoke('image-detector:getResults', taskId),
 
