@@ -24,6 +24,9 @@
             <el-button type="primary" @click="selectFile" :disabled="validating">
               浏览
             </el-button>
+            <el-button type="success" @click="loadDemoData" :disabled="validating" plain>
+              🎯 加载演示数据
+            </el-button>
           </div>
         </el-form-item>
         <el-form-item label="输出目录">
@@ -245,6 +248,7 @@
 import { ref, computed } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
 import { Download } from '@element-plus/icons-vue';
+import { generateDemoCSV } from '@/utils/demo-data';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -542,6 +546,37 @@ async function exportReport(format: 'excel' | 'json' | 'csv'): Promise<void> {
     exporting.value = false;
     exportFormat.value = '';
   }
+}
+
+// 演示模式：加载内置数据并模拟校验
+function loadDemoData() {
+  filePath.value = '📋 演示数据 (员工信息表)';
+  
+  // 模拟校验报告
+  report.value = {
+    taskId: 'demo-001',
+    fileName: '员工信息表.csv',
+    fileType: 'csv',
+    totalRows: 10,
+    totalErrors: 4,
+    totalWarnings: 2,
+    duration: 1250,
+    completedAt: new Date().toISOString(),
+    ruleResults: [
+      { ruleType: 'required', ruleName: '必填校验', errorCount: 2, warningCount: 0 },
+      { ruleType: 'format', ruleName: '格式校验', errorCount: 2, warningCount: 0 },
+      { ruleType: 'range', ruleName: '范围校验', errorCount: 0, warningCount: 2 },
+    ],
+    errors: [
+      { rowNumber: 3, fieldName: '年龄', errorType: '范围超限', description: '年龄 150 超出合理范围 [0, 120]', suggestion: '请输入有效年龄', severity: 'warning', value: '150' },
+      { rowNumber: 3, fieldName: '邮箱', errorType: '格式错误', description: '邮箱格式不正确', suggestion: '请输入正确邮箱格式', severity: 'error', value: 'lisi@company' },
+      { rowNumber: 4, fieldName: '姓名', errorType: '必填为空', description: '姓名为必填字段，不能为空', suggestion: '请填写姓名', severity: 'error', value: '' },
+      { rowNumber: 5, fieldName: '手机', errorType: '格式错误', description: '手机号位数不正确', suggestion: '请输入11位手机号', severity: 'error', value: '138001380022' },
+      { rowNumber: 7, fieldName: '姓名', errorType: '必填为空', description: '姓名为必填字段，不能为空', suggestion: '请填写姓名', severity: 'error', value: '' },
+      { rowNumber: 8, fieldName: '状态', errorType: '枚举超限', description: '状态"未知"不在允许范围内', suggestion: '可选值：在职、离职', severity: 'warning', value: '未知' },
+    ],
+  };
+  ElNotification({ title: '演示数据已加载', message: '包含 10 行员工信息，发现 4 个错误 + 2 个警告', type: 'success' });
 }
 </script>
 

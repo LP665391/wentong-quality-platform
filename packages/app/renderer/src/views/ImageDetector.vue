@@ -25,6 +25,9 @@
             <el-button type="primary" @click="selectDir" :disabled="running">
               浏览
             </el-button>
+            <el-button type="success" @click="loadDemoImages" :disabled="running" plain>
+              🎯 加载演示图片
+            </el-button>
           </div>
         </el-form-item>
 
@@ -533,6 +536,22 @@ function resetResults(): void {
   results.value = [];
   progress.value = { current: 0, total: 0, fileName: '', percent: 0 };
   taskId.value = '';
+}
+
+// 演示模式：加载内置图片并模拟检测
+function loadDemoImages() {
+  dirPath.value = '📁 演示图片目录';
+  
+  results.value = [
+    { fileName: 'product-001.jpg', filePath: '/demo/product-001.jpg', isQualified: true,  score: 95, modelUsed: 'clarity', details: { resolution: '1920x1080', size: '245KB' } },
+    { fileName: 'product-002.jpg', filePath: '/demo/product-002.jpg', isQualified: true,  score: 88, modelUsed: 'clarity', details: { resolution: '800x600', size: '120KB' } },
+    { fileName: 'product-003.jpg', filePath: '/demo/product-003.jpg', isQualified: false, score: 15, modelUsed: 'clarity', details: { resolution: '100x50', size: '3KB', reason: '分辨率过低' } },
+    { fileName: 'product-004.png', filePath: '/demo/product-004.png', isQualified: true,  score: 92, modelUsed: 'clarity', details: { resolution: '1280x720', size: '180KB' } },
+    { fileName: 'product-005.jpg', filePath: '/demo/product-005.jpg', isQualified: true,  score: 78, modelUsed: 'clarity', details: { resolution: '640x480', size: '85KB' } },
+    { fileName: 'scan-001.jpg',    filePath: '/demo/scan-001.jpg',    isQualified: false, score: 40, modelUsed: 'clarity', details: { resolution: '200x200', size: '25KB', reason: '尺寸偏小' } },
+  ];
+  
+  ElNotification({ title: '演示数据已加载', message: '6 张检测图片，合格率 66.7%', type: 'success' });
 }
 </script>
 
