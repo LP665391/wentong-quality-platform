@@ -1,8 +1,14 @@
 <template>
   <div class="module-page">
     <div class="page-header">
-      <h2>📋 文档管理</h2>
-      <p class="page-desc">从 Excel 表格自动提取指定字段，生成结构化数据</p>
+      <h2>
+        <template v-if="appStore.demoMode && result">📋 供应商来料质检 · 字段提取</template>
+        <template v-else>📋 文档管理</template>
+      </h2>
+      <p class="page-desc" v-if="appStore.demoMode && result">
+        从供应商 Excel 报告中自动提取 24 个预定义字段，模糊匹配表头，秒级完成。
+      </p>
+      <p class="page-desc" v-else>从 Excel 表格自动提取指定字段，生成结构化数据</p>
     </div>
 
     <!-- ── 步骤一：选择文件 ── -->
@@ -149,8 +155,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
+import { useAppStore } from '@/stores/app';
+import { generateDocParseResults } from '@/utils/demo-scenarios';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -217,6 +225,41 @@ const selectedFields = ref<number[]>(predefinedFields.map((f) => f.id));
 const result = ref<DocResult | null>(null);
 const progressMessage = ref('');
 const progressType = ref<'info' | 'success' | 'warning' | 'error'>('info');
+const appStore = useAppStore();
+
+onMounted(() => {
+  const scenario = sessionStorage.getItem('demoScenario');
+  if (scenario === 'supplier-qc') {
+    sessionStorage.removeItem('demoScenario');
+    loadDemoData();
+  }
+});
+
+function loadDemoData() {
+  filePath.value = '📋 2026年6月_供应商来料检验报告.xlsx';
+  const demoResult = generateDocParseResults();
+  // 将匹配结果转换为 DocField 格式
+  const fields: DocField[] = predefinedFields.map((f) => {
+    const match = demoResult.matches.find((m) => m.fieldId === f.id);
+    return {
+      id: f.id,
+      name: f.name,
+      value: match ? `行 ${match.fieldId} - ${match.headerName}` : '',
+      matched: !!match,
+    };
+  });
+  result.value = {
+    fileName: '2026年6月_供应商来料检验报告.xlsx',
+    fields,
+    totalFields: demoResult.totalFields,
+    matchedFields: demoResult.matchedFields,
+  };
+  ElNotification({
+    title: '文档管理 · 演示数据已加载',
+    message: `24 个预定义字段，成功匹配 ${demoResult.matchedFields} 个`,
+    type: 'success',
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Computed

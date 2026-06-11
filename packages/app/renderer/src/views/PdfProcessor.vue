@@ -1,8 +1,14 @@
 <template>
   <div class="module-page">
     <div class="page-header">
-      <h2>📄 PDF处理</h2>
-      <p class="page-desc">合并、拆分、加密、水印，一站式 PDF 文档处理</p>
+      <h2>
+        <template v-if="appStore.demoMode">🔐 质检文档加密归档</template>
+        <template v-else>📄 PDF处理</template>
+      </h2>
+      <p class="page-desc" v-if="appStore.demoMode">
+        质检完成后需要生成报告、加水印、加密归档。传统方式需切换多个工具，Ai质检平台一键完成。
+      </p>
+      <p class="page-desc" v-else>合并、拆分、加密、水印，一站式 PDF 文档处理</p>
     </div>
 
     <div class="wt-card">
@@ -394,9 +400,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
+import { useAppStore } from '@/stores/app';
 import { Delete, Top, Bottom, Plus } from '@element-plus/icons-vue';
+import { COMPARISON_DATA, type ComparisonData } from '@/utils/demo-scenarios';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -415,6 +423,16 @@ const activeTab = ref('merge');
 const processing = ref(false);
 const activeAction = ref('');
 const showProgress = ref(false);
+const appStore = useAppStore();
+
+onMounted(() => {
+  const scenario = sessionStorage.getItem('demoScenario');
+  if (scenario === 'doc-archive') {
+    sessionStorage.removeItem('demoScenario');
+    // 演示模式下预填示例值
+    activeTab.value = 'watermark';
+  }
+});
 const progressPercent = ref(0);
 
 // ---------------------------------------------------------------------------

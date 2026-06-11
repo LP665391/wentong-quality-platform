@@ -214,7 +214,11 @@ function animateStats() {
     };
 
     if (step >= steps) {
-      animatedStats.value = { ...target };
+      animatedStats.value = {
+        rows: target.totalRows,
+        issues: target.totalIssues,
+        reports: target.totalReports,
+      };
       if (statsTimer) clearInterval(statsTimer);
     }
   }, interval);
