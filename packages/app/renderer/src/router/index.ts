@@ -65,10 +65,16 @@ const router = createRouter({
 // ---------------------------------------------------------------------------
 // 全局前置守卫：未激活时只能访问 /activation
 // ---------------------------------------------------------------------------
-
+// 全局前置守卫：未激活时只能访问 /activation
 router.beforeEach(async (to, _from, next) => {
   // 激活页面总是可以访问
   if (to.meta.noAuth === true) {
+    next();
+    return;
+  }
+
+  // 浏览器开发环境：跳过激活检查，直接放行
+  if (!(window as any).api && !(window as any).electronAPI) {
     next();
     return;
   }
@@ -78,14 +84,11 @@ router.beforeEach(async (to, _from, next) => {
     const authStatus = await (window as any).api?.invoke?.('auth:getStatus');
 
     if (authStatus?.activated || authStatus?.trialActive) {
-      // 已激活或在试用期，放行
       next();
     } else {
-      // 未激活，跳转到激活页面
       next({ name: 'Activation' });
     }
   } catch {
-    // IPC 调用失败（可能不在 Electron 环境），放行以便开发调试
     next();
   }
 });
