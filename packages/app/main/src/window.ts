@@ -74,7 +74,7 @@ export function createMainWindow(): BrowserWindow {
     minWidth: MIN_WIDTH,
     minHeight: MIN_HEIGHT,
     title: WINDOW_TITLE,
-    show: true, // 开发模式直接显示，便于调试
+    show: false, // 等待 ready-to-show 后再显示，避免白屏闪烁
 
     // macOS 无边框样式，保留红绿灯按钮
     ...(isMac
@@ -88,7 +88,7 @@ export function createMainWindow(): BrowserWindow {
       preload: getPreloadPath(),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true, // 启用 Chromium OS 级沙箱
     },
   });
 

@@ -144,6 +144,12 @@ export function setupDataValidatorIpc(): void {
         return { success: true, report };
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
+
+        // 用户取消不视为失败
+        if (message === 'CANCELLED') {
+          return { success: false, cancelled: true };
+        }
+
         repo.updateTaskStatus(taskId, 'failed', message);
 
         // 推送错误进度
@@ -171,10 +177,16 @@ export function setupDataValidatorIpc(): void {
     const { taskId } = params;
     const repo = getRepository();
 
-    // 1) 从 engines map 移除
+    // 1) 通知引擎中止
+    const engine = engines.get(taskId);
+    if (engine) {
+      engine.abort();
+    }
+
+    // 2) 从 engines map 移除
     engines.delete(taskId);
 
-    // 2) 更新任务状态为 cancelled
+    // 3) 更新任务状态为 cancelled
     repo.updateTaskStatus(taskId, 'cancelled');
 
     return { success: true };

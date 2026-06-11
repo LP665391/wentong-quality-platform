@@ -37,7 +37,7 @@ export function setupDocManagerIpc(): void {
 
       try {
         const repo = getRepository();
-        const fileName = filePath.split(/[/\\\\]/).pop() ?? 'unknown';
+        const fileName = filePath.split(/[/\\]/).pop() ?? 'unknown';
         const task = repo.createTask({
           module: 'doc',
           task_name: `文档解析 - ${fileName}`,

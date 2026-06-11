@@ -18,22 +18,49 @@ import crypto from 'node:crypto';
 /**
  * 获取主网络接口的 MAC 地址
  *
- * 遍历所有网络接口，寻找第一个非内部、有 MAC 地址的接口。
- * 如果没有找到，返回固定字符串 "00:00:00:00:00:00"。
+ * 优先选择物理网卡（以太网 > Wi-Fi），避免虚拟接口/VPN 导致的指纹变化。
+ * 遍历所有网络接口，寻找第一个非内部、有 MAC 地址的物理接口。
+ * 如果没有找到物理接口，回退到任意非内部接口。
+ * 如果都没有，返回固定字符串 "00:00:00:00:00:00"。
  */
 function getPrimaryMacAddress(): string {
   const interfaces = os.networkInterfaces();
-  for (const [, ifaceList] of Object.entries(interfaces)) {
+
+  // 优先匹配的接口名前缀（物理网卡），按优先级排序
+  const PHYSICAL_PREFIXES = ['en', 'eth', 'wl', 'wlan'];
+  const VIRTUAL_KEYWORDS = ['vpn', 'tun', 'tap', 'bridge', 'docker', 'veth', 'utun', 'llw', 'awdl', 'anpi'];
+
+  let bestMac = '';
+
+  for (const [name, ifaceList] of Object.entries(interfaces)) {
     if (!ifaceList) continue;
+
+    const lowerName = name.toLowerCase();
+
+    // 跳过虚拟接口
+    if (VIRTUAL_KEYWORDS.some((kw) => lowerName.includes(kw))) continue;
+
     for (const iface of ifaceList) {
       // 跳过内部回环接口
       if (iface.internal) continue;
       // 跳过没有 MAC 地址的接口
       if (!iface.mac || iface.mac === '00:00:00:00:00:00') continue;
-      return iface.mac;
+
+      const isPhysical = PHYSICAL_PREFIXES.some((p) => lowerName.startsWith(p));
+
+      if (isPhysical) {
+        // 物理接口直接返回（最高优先级）
+        return iface.mac;
+      }
+
+      // 非物理但可用的接口作为备选
+      if (!bestMac) {
+        bestMac = iface.mac;
+      }
     }
   }
-  return '00:00:00:00:00:00';
+
+  return bestMac || '00:00:00:00:00:00';
 }
 
 /**

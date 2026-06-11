@@ -110,7 +110,8 @@ export function getTrialInfo(): TrialInfo {
   const expired = remainingDays <= 0;
 
   return {
-    isTrial: true,
+    // 过期后不再视为“试用中”，避免调用方仅检查 isTrial 而误判
+    isTrial: !expired,
     startDate: data.startDate,
     endDate: endDate.toISOString().split('T')[0],
     remainingDays,
@@ -127,11 +128,12 @@ export function getTrialInfo(): TrialInfo {
  * @returns 试用信息
  */
 export function startTrial(): TrialInfo {
-  const existing = getTrialInfo();
+  // 检查是否已经发起过试用（不管是否过期，防止重复试用）
+  const existingData = readTrialData();
 
-  // 如果已经在试用中，直接返回
-  if (existing.isTrial) {
-    return existing;
+  if (existingData) {
+    // 已经有过试用记录，返回当前试用状态（可能已过期）
+    return getTrialInfo();
   }
 
   // 开始新的试用

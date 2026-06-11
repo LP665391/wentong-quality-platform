@@ -2,13 +2,14 @@
  * MD5/SHA 哈希计算器
  *
  * 使用 Node.js crypto 流式哈希，支持大文件。
- * 批量模式使用 worker_threads 进行并行计算。
+ * 单文件使用流式哈希（支持超大文件），批量模式使用 worker_threads 进行并行计算。
  */
 
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Worker } from 'node:worker_threads';
+import { fileURLToPath } from 'node:url';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,6 +32,13 @@ export interface HashResult {
   fileSize: number;
   /** 计算耗时（毫秒） */
   duration: number;
+}
+
+/** Worker 返回的消息格式 */
+interface WorkerMessage {
+  success: boolean;
+  result?: HashResult;
+  error?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +102,50 @@ export async function hashFile(
 export type BatchProgressCallback = (completed: number, total: number) => void;
 
 /**
+ * 获取 worker 脚本路径
+ *
+ * 兼容 CommonJS 和 ESM 两种模块系统。
+ */
+function getWorkerPath(): string {
+  // CommonJS 环境使用 __dirname
+  if (typeof __dirname !== 'undefined') {
+    return path.join(__dirname, 'hash-worker.js');
+  }
+  // ESM 环境使用 import.meta.url
+  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  return path.join(currentDir, 'hash-worker.js');
+}
+
+/**
+ * 在 Worker 线程中计算单个文件的哈希值
+ */
+function hashFileInWorker(
+  worker: Worker,
+  filePath: string,
+  algorithm: HashAlgorithm,
+): Promise<HashResult> {
+  return new Promise((resolve, reject) => {
+    const onMessage = (msg: WorkerMessage) => {
+      worker.off('message', onMessage);
+      worker.off('error', onError);
+      if (msg.success && msg.result) {
+        resolve(msg.result);
+      } else {
+        reject(new Error(msg.error ?? 'Worker 执行失败'));
+      }
+    };
+    const onError = (err: Error) => {
+      worker.off('message', onMessage);
+      worker.off('error', onError);
+      reject(new Error(`Worker 错误: ${err.message}`));
+    };
+    worker.on('message', onMessage);
+    worker.on('error', onError);
+    worker.postMessage({ filePath, algorithm });
+  });
+}
+
+/**
  * 批量计算目录下所有文件的哈希值
  *
  * 使用 worker_threads 并行计算，默认并发数为 4。
@@ -119,6 +171,14 @@ export async function hashDirectory(
     throw new Error(`路径不是目录: ${dirPath}`);
   }
 
+  // 校验并发数
+  const effectiveConcurrency = Math.max(1, Math.min(concurrency, 16));
+  if (concurrency < 1) {
+    console.warn(`[md5-checker] 并发数 ${concurrency} 无效，已重置为 1`);
+  } else if (concurrency > 16) {
+    console.warn(`[md5-checker] 并发数 ${concurrency} 超过上限 16，已限制为 16`);
+  }
+
   // 收集目录下所有文件
   const files = collectFiles(dirPath);
   if (files.length === 0) {
@@ -128,27 +188,59 @@ export async function hashDirectory(
   const total = files.length;
   let completed = 0;
   const results: HashResult[] = [];
+  const errors: { filePath: string; error: string }[] = [];
 
-  // 并发控制队列
-  const queue = [...files];
-  const workers: Promise<void>[] = [];
+  // 创建 Worker 线程池
+  const workerPool: Worker[] = [];
+  const poolSize = Math.min(effectiveConcurrency, files.length);
 
-  for (let i = 0; i < Math.min(concurrency, queue.length); i++) {
-    workers.push(runWorker());
-  }
+  try {
+    for (let i = 0; i < poolSize; i++) {
+      const worker = new Worker(getWorkerPath());
+      workerPool.push(worker);
+    }
 
-  await Promise.all(workers);
-  return results;
+    // 文件队列并发处理
+    const queue = [...files];
 
-  async function runWorker(): Promise<void> {
-    while (queue.length > 0) {
-      const filePath = queue.shift()!;
-      const result = await hashFile(filePath, algorithm);
-      results.push(result);
-      completed++;
-      onProgress?.(completed, total);
+    const runWorkerTask = async (worker: Worker): Promise<void> => {
+      while (queue.length > 0) {
+        const filePath = queue.shift()!;
+        try {
+          const result = await hashFileInWorker(worker, filePath, algorithm);
+          results.push(result);
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          errors.push({ filePath, error: message });
+          // 出错时回退到主线程流式哈希
+          try {
+            const result = await hashFile(filePath, algorithm);
+            results.push(result);
+          } catch {
+            // 两次都失败则跳过
+          }
+        }
+        completed++;
+        onProgress?.(completed, total);
+      }
+    };
+
+    // 启动所有 worker
+    await Promise.all(workerPool.map((w) => runWorkerTask(w)));
+  } finally {
+    // 清理所有 worker
+    for (const worker of workerPool) {
+      try { worker.terminate(); } catch { /* ignore */ }
     }
   }
+
+  if (errors.length > 0) {
+    console.warn(`[md5-checker] ${errors.length} 个文件在 Worker 中处理失败，已回退重试`);
+  }
+
+  // 将错误列表附加到结果上，调用方可通过 (results as any).errors 获取
+  (results as any).errors = errors;
+  return results;
 }
 
 /**

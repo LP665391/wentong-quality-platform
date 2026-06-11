@@ -34,7 +34,13 @@ export async function preprocessImage(
   let pipeline = sharp(filePath);
 
   // 获取原始元数据
-  const metadata = await pipeline.metadata();
+  let metadata;
+  try {
+    metadata = await pipeline.metadata();
+  } catch {
+    pipeline.destroy();
+    throw new Error('无法读取图像元数据，文件可能已损坏');
+  }
   const origWidth = metadata.width ?? 0;
   const origHeight = metadata.height ?? 0;
   const origFormat = metadata.format ?? 'unknown';
@@ -56,10 +62,21 @@ export async function preprocessImage(
     }
   }
 
-  const buffer = await pipeline.toBuffer();
+  let buffer;
+  try {
+    buffer = await pipeline.toBuffer();
+  } finally {
+    pipeline.destroy();
+  }
 
   // 获取输出图像元数据
-  const outMetadata = await sharp(buffer).metadata();
+  const outPipeline = sharp(buffer);
+  let outMetadata;
+  try {
+    outMetadata = await outPipeline.metadata();
+  } finally {
+    outPipeline.destroy();
+  }
 
   return {
     buffer,

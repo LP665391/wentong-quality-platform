@@ -79,9 +79,14 @@ export async function extractMetadata(filePath: string): Promise<FileMetadata> {
     try {
       // 动态导入 sharp（可选依赖）
       const sharp = await importSharp();
-      const imageInfo = await sharp(filePath).metadata();
-      if (imageInfo.width) metadata.imageWidth = imageInfo.width;
-      if (imageInfo.height) metadata.imageHeight = imageInfo.height;
+      const pipeline = sharp(filePath);
+      try {
+        const imageInfo = await pipeline.metadata();
+        if (imageInfo.width) metadata.imageWidth = imageInfo.width;
+        if (imageInfo.height) metadata.imageHeight = imageInfo.height;
+      } finally {
+        pipeline.destroy();
+      }
     } catch {
       // sharp 不可用或图片格式不支持，跳过尺寸提取
     }

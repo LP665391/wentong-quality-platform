@@ -65,7 +65,6 @@ const router = createRouter({
 // ---------------------------------------------------------------------------
 // 全局前置守卫：未激活时只能访问 /activation
 // ---------------------------------------------------------------------------
-// 全局前置守卫：未激活时只能访问 /activation
 router.beforeEach(async (to, _from, next) => {
   // 激活页面总是可以访问
   if (to.meta.noAuth === true) {
@@ -74,14 +73,15 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   // 浏览器开发环境：跳过激活检查，直接放行
-  if (!(window as any).api && !(window as any).electronAPI) {
+  const electronAPI = (window as any).electronAPI ?? (window as any).api;
+  if (!electronAPI) {
     next();
     return;
   }
 
   // 检查激活状态（通过 IPC 调用主进程）
   try {
-    const authStatus = await (window as any).api?.invoke?.('auth:getStatus');
+    const authStatus = await electronAPI.invoke?.('auth:getStatus');
 
     if (authStatus?.activated || authStatus?.trialActive) {
       next();
@@ -89,7 +89,9 @@ router.beforeEach(async (to, _from, next) => {
       next({ name: 'Activation' });
     }
   } catch {
-    next();
+    // IPC 调用失败（主进程未就绪等），重定向到激活页面以确保安全
+    // 不能直接放行，否则会绕过激活检查
+    next({ name: 'Activation' });
   }
 });
 

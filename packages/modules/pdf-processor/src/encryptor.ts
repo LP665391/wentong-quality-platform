@@ -17,13 +17,14 @@ export interface EncryptOptions {
 /**
  * PDF 加密/解密器
  *
- * 由于 pdf-lib v1.17 不原生支持 PDF 加密标准，
- * 此处使用 AES-256-CBC 对整个 PDF 文件进行加密，
+ * 使用 AES-256-GCM 对整个 PDF 文件进行加密（带认证标签，防篡改），
  * 并在加密数据前添加简单的 magic header 用于识别。
  */
 export class PdfEncryptor {
-  private static readonly ALGORITHM = 'aes-256-cbc';
+  private static readonly ALGORITHM = 'aes-256-gcm';
   private static readonly MAGIC = Buffer.from('WTENC'); // 文通加密标识
+  private static readonly IV_LENGTH = 12; // GCM 推荐 IV 长度
+  private static readonly AUTH_TAG_LENGTH = 16; // GCM 认证标签长度
 
   /**
    * 加密 PDF 文件
@@ -46,18 +47,22 @@ export class PdfEncryptor {
 
     const fileBytes = fs.readFileSync(filePath);
 
-    // 使用 SHA-256 从密码派生 32 字节密钥
-    const key = crypto.createHash('sha256').update(options.userPassword).digest();
+    // 生成随机 16 字节盐
+    const salt = crypto.randomBytes(16);
 
-    // 生成随机 IV
-    const iv = crypto.randomBytes(16);
+    // 使用 PBKDF2 从密码派生 32 字节密钥（100,000 次迭代防暴力破解）
+    const key = crypto.pbkdf2Sync(options.userPassword, salt, 100000, 32, 'sha256');
 
-    // AES-256-CBC 加密
+    // 生成随机 IV（GCM 推荐 12 字节）
+    const iv = crypto.randomBytes(PdfEncryptor.IV_LENGTH);
+
+    // AES-256-GCM 加密（自带认证标签防篡改）
     const cipher = crypto.createCipheriv(PdfEncryptor.ALGORITHM, key, iv);
     const encrypted = Buffer.concat([cipher.update(fileBytes), cipher.final()]);
+    const authTag = cipher.getAuthTag();
 
-    // 写入格式: MAGIC (5B) + IV (16B) + encrypted data
-    const output = Buffer.concat([PdfEncryptor.MAGIC, iv, encrypted]);
+    // 写入格式: MAGIC (5B) + salt (16B) + IV (12B) + authTag (16B) + encrypted data
+    const output = Buffer.concat([PdfEncryptor.MAGIC, salt, iv, authTag, encrypted]);
 
     // 同时保存权限配置到文件末尾（JSON）
     const permsJson = JSON.stringify({
@@ -95,8 +100,18 @@ export class PdfEncryptor {
     const fileBytes = fs.readFileSync(filePath);
 
     // 读取权限长度（最后4字节）
+    if (fileBytes.length < 4) {
+      throw new Error('文件格式无效或已损坏');
+    }
     const permsLength = fileBytes.readUInt32BE(fileBytes.length - 4);
     const encryptedData = fileBytes.subarray(0, fileBytes.length - permsLength - 4);
+
+    // 最小长度: MAGIC(5) + salt(16) + IV(12) + authTag(16) = 49 字节
+    const SALT_LENGTH = 16;
+    const MIN_ENCRYPTED_LENGTH = 5 + SALT_LENGTH + PdfEncryptor.IV_LENGTH + PdfEncryptor.AUTH_TAG_LENGTH;
+    if (encryptedData.length < MIN_ENCRYPTED_LENGTH) {
+      throw new Error('文件不是有效的加密格式，或文件已损坏');
+    }
 
     // 检查 magic header
     const magic = encryptedData.subarray(0, 5);
@@ -104,15 +119,25 @@ export class PdfEncryptor {
       throw new Error('文件不是有效的加密格式，或密码不正确');
     }
 
-    // 读取 IV（magic 之后的 16 字节）
-    const iv = encryptedData.subarray(5, 21);
-    const ciphertext = encryptedData.subarray(21);
+    let offset = 5;
+    // 读取盐
+    const salt = encryptedData.subarray(offset, offset + SALT_LENGTH);
+    offset += SALT_LENGTH;
+    // 读取 IV
+    const iv = encryptedData.subarray(offset, offset + PdfEncryptor.IV_LENGTH);
+    offset += PdfEncryptor.IV_LENGTH;
+    // 读取认证标签
+    const authTag = encryptedData.subarray(offset, offset + PdfEncryptor.AUTH_TAG_LENGTH);
+    offset += PdfEncryptor.AUTH_TAG_LENGTH;
+    // 剩余部分为密文
+    const ciphertext = encryptedData.subarray(offset);
 
-    // 从密码派生密钥
-    const key = crypto.createHash('sha256').update(password).digest();
+    // 使用 PBKDF2 从密码和盐派生密钥
+    const key = crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256');
 
     try {
       const decipher = crypto.createDecipheriv(PdfEncryptor.ALGORITHM, key, iv);
+      decipher.setAuthTag(authTag);
       const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
       fs.writeFileSync(outputPath, decrypted);
     } catch {

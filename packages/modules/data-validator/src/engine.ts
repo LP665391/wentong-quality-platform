@@ -82,6 +82,7 @@ interface PresetRuleEntry {
 
 /**
  * 标准预设：必填 + 格式 + 范围
+ * 注意：format 规则的 formatType 默认为空，需用户根据实际数据补充（如 'date', 'number', 'email' 等）
  */
 function buildStandardPreset(fields: string[]): PresetRuleEntry[] {
   return [
@@ -91,7 +92,7 @@ function buildStandardPreset(fields: string[]): PresetRuleEntry[] {
     },
     {
       type: 'format',
-      config: { enabled: true, severity: 'error' as const, fields, formatType: 'email' },
+      config: { enabled: true, severity: 'error' as const, fields, formatType: undefined },
     },
     {
       type: 'range',
@@ -102,6 +103,7 @@ function buildStandardPreset(fields: string[]): PresetRuleEntry[] {
 
 /**
  * 严格预设：必填 + 格式 + 范围（全部 error，更严格的范围）
+ * 注意：format 规则的 formatType 默认为空，需用户根据实际数据补充
  */
 function buildStrictPreset(fields: string[]): PresetRuleEntry[] {
   return [
@@ -111,7 +113,7 @@ function buildStrictPreset(fields: string[]): PresetRuleEntry[] {
     },
     {
       type: 'format',
-      config: { enabled: true, severity: 'error' as const, fields, formatType: 'email' },
+      config: { enabled: true, severity: 'error' as const, fields, formatType: undefined },
     },
     {
       type: 'range',
@@ -157,6 +159,9 @@ export class ValidationEngine {
   /** 当前激活的规则配置 */
   private ruleConfigs: Map<string, RuleConfig> = new Map();
 
+  /** 中止标志：设置为 true 后 validate() 将在下次检查点抛出 CANCELLED */
+  private _aborted = false;
+
   /**
    * 添加规则配置
    *
@@ -183,6 +188,13 @@ export class ValidationEngine {
    */
   removeRule(type: string): void {
     this.ruleConfigs.delete(type);
+  }
+
+  /**
+   * 中止正在执行的校验任务
+   */
+  abort(): void {
+    this._aborted = true;
   }
 
   /**
@@ -278,6 +290,11 @@ export class ValidationEngine {
       const progressPerRule = 80 / rulesCount; // 10→90 共 80%
 
       for (let idx = 0; idx < ruleTypes.length; idx++) {
+        // 检查中止标志
+        if (this._aborted) {
+          throw new Error('CANCELLED');
+        }
+
         const type = ruleTypes[idx];
         const config = this.ruleConfigs.get(type)!;
 

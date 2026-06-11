@@ -94,9 +94,21 @@ export function setupIpcHandlers(): void {
    * @param options - 对话框选项（filters 等）
    * @returns 选中的文件路径数组，取消则返回空数组
    */
+  /**
+   * 获取当前活跃窗口，带回退机制。
+   * macOS 上点击菜单后 getFocusedWindow() 可能返回 null。
+   */
+  function getActiveWindow(): BrowserWindow {
+    return (
+      BrowserWindow.getFocusedWindow() ??
+      BrowserWindow.getAllWindows()[0] ??
+      (() => { throw new Error('No browser window available'); })()
+    );
+  }
+
   ipcMain.handle('dialog:openFile', async (_event, options?: Electron.OpenDialogOptions) => {
-    const win = BrowserWindow.getFocusedWindow();
-    const result = await dialog.showOpenDialog(win!, {
+    const win = getActiveWindow();
+    const result = await dialog.showOpenDialog(win, {
       properties: ['openFile'],
       ...options,
     });
@@ -111,8 +123,8 @@ export function setupIpcHandlers(): void {
    * @returns 选中的目录路径，取消则返回空字符串
    */
   ipcMain.handle('dialog:openDirectory', async (_event, options?: Electron.OpenDialogOptions) => {
-    const win = BrowserWindow.getFocusedWindow();
-    const result = await dialog.showOpenDialog(win!, {
+    const win = getActiveWindow();
+    const result = await dialog.showOpenDialog(win, {
       properties: ['openDirectory'],
       ...options,
     });

@@ -16,14 +16,39 @@ import crypto from 'node:crypto';
 // ---------------------------------------------------------------------------
 // 共享密钥
 //
-// 客户端和管理后台使用相同的密钥进行签名和验证。
-// 生产环境应替换为 RSA 公钥（客户端）和 RSA 私钥（管理后台）。
+// ⚠️ 安全警告：生产环境必须替换为 RSA 非对称加密方案。
+//
+// 当前 HMAC-SHA256 为演示/开发目的。攻击者可从 Electron asar 包中提取此密钥，
+// 进而无限生成有效许可证。
+//
+// 生产部署前必须完成以下迁移：
+//   1. 管理后台使用 RSA 私钥签名
+//   2. 客户端仅内嵌 RSA 公钥验证
+//   3. 删除此 SECRET_KEY 常量
+//
+// 临时缓解：可通过环境变量 WENTONG_SECRET_KEY 覆盖默认密钥。
 // ---------------------------------------------------------------------------
 
-const SECRET_KEY_BASE64 = 'V2VuVG9uZ1F1YWxpdHlQbGF0Zm9ybVNlY3JldEtleTIwMjU=';
+const DEFAULT_SECRET_KEY_BASE64 = 'V2VuVG9uZ1F1YWxpdHlQbGF0Zm9ybVNlY3JldEtleTIwMjU=';
 
-/** 解码后的密钥 Buffer */
-const SECRET_KEY = Buffer.from(SECRET_KEY_BASE64, 'base64');
+/**
+ * 获取当前生效的密钥。
+ * 优先读取环境变量 WENTONG_SECRET_KEY，回退到默认值（仅用于开发）。
+ */
+function getSecretKey(): Buffer {
+  const envKey = process.env.WENTONG_SECRET_KEY;
+  if (envKey) {
+    return Buffer.from(envKey, 'base64');
+  }
+  // 开发环境使用默认密钥，生产环境必须通过环境变量注入
+  if (process.env.NODE_ENV === 'production') {
+    console.warn(
+      '[wentong-auth] ⚠️  WENTONG_SECRET_KEY 环境变量未设置，使用默认密钥。',
+      '生产环境请务必设置此变量！',
+    );
+  }
+  return Buffer.from(DEFAULT_SECRET_KEY_BASE64, 'base64');
+}
 
 // ---------------------------------------------------------------------------
 // 签名与验证
@@ -36,7 +61,8 @@ const SECRET_KEY = Buffer.from(SECRET_KEY_BASE64, 'base64');
  * @returns Base64 编码的签名
  */
 export function sign(content: string): string {
-  const hmac = crypto.createHmac('sha256', SECRET_KEY);
+  const secretKey = getSecretKey();
+  const hmac = crypto.createHmac('sha256', secretKey);
   hmac.update(content, 'utf-8');
   return hmac.digest('base64');
 }

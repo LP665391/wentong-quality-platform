@@ -56,16 +56,6 @@ function getLicensePath(): string {
   return path.join(dataDir, 'license.dat');
 }
 
-/**
- * 确保数据目录存在
- */
-function ensureDataDir(): void {
-  const dir = path.join(os.homedir(), '.wentong-quality');
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
 // ---------------------------------------------------------------------------
 // LicenseManager 类
 // ---------------------------------------------------------------------------
@@ -159,8 +149,7 @@ export class LicenseManager {
 
     const { content, signature } = generateLicenseContent(customer, machineId);
 
-    // 保存许可证文件
-    ensureDataDir();
+    // 保存许可证文件（使用 writeLicenseFile 内部自带的目录创建逻辑）
     this.writeLicenseFile({ content, signature });
 
     return this.toLicenseInfo(content);
@@ -218,8 +207,7 @@ export class LicenseManager {
       }
     }
 
-    // 保存本地许可证
-    ensureDataDir();
+    // 保存本地许可证（writeLicenseFile 内部确保目录存在）
     this.writeLicenseFile(licenseFile);
 
     return this.toLicenseInfo(licenseFile.content);
@@ -307,13 +295,12 @@ export class LicenseManager {
    * 将 LicenseContent 转换为 LicenseInfo（对外接口）
    */
   private toLicenseInfo(content: LicenseContent): LicenseInfo {
-    const currentMachineId = generateMachineId();
     return {
       licenseId: content.licenseId,
       customerName: content.customerName,
       company: content.company,
       type: content.type,
-      machineId: currentMachineId,
+      machineId: content.machineId, // 许可证绑定的机器指纹，非当前机器
       issueDate: content.issueDate,
       expireDate: content.expireDate,
       activated: true,

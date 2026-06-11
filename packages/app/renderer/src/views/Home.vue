@@ -36,7 +36,7 @@
           <div class="module-icon">{{ item.icon }}</div>
           <h3 class="module-name">{{ item.name }}</h3>
           <p class="module-desc">{{ item.desc }}</p>
-          <el-button type="primary" class="module-action" plain>
+          <el-button type="primary" class="module-action" plain @click.stop="goModule(item.route)">
             {{ item.action }}
             <el-icon class="module-arrow"><ArrowRight /></el-icon>
           </el-button>

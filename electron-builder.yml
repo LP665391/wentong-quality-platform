@@ -14,6 +14,16 @@ files:
   - "!node_modules/**/docs/**"
   - "!node_modules/**/test/**"
   - "!node_modules/**/tests/**"
+  # 排除开发依赖减小包体积
+  - "!node_modules/typescript/**"
+  - "!node_modules/vite/**"
+  - "!node_modules/vitest/**"
+  - "!node_modules/vue-tsc/**"
+  - "!node_modules/eslint/**"
+  - "!node_modules/@types/**"
+  - "!node_modules/@vitejs/**"
+  - "!node_modules/@vitest/**"
+  - "!node_modules/@eslint/**"
 
 asar: true
 asarUnpack:

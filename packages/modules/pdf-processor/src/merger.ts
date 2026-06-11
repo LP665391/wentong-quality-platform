@@ -1,5 +1,6 @@
 import { PDFDocument } from 'pdf-lib';
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 export interface MergeResult {
   totalPages: number;
@@ -55,6 +56,11 @@ export class PdfMerger {
     }
 
     const mergedBytes = await mergedDoc.save();
+    // 确保输出目录存在（与 PdfSplitter 行为一致）
+    const outDir = path.dirname(outputPath);
+    if (!fs.existsSync(outDir)) {
+      fs.mkdirSync(outDir, { recursive: true });
+    }
     fs.writeFileSync(outputPath, Buffer.from(mergedBytes));
 
     return { totalPages, outputPath };

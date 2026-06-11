@@ -31,7 +31,7 @@ export class ImageDetector {
    * 对指定图像执行检测
    */
   async detect(filePath: string, modelId: string): Promise<DetectionResult> {
-    const fileName = filePath.split('/').pop() ?? filePath;
+    const fileName = filePath.split(/[/\\]/).pop() ?? filePath;
 
     const model = this.models.get(modelId);
     if (!model) {
@@ -88,7 +88,13 @@ export class ImageDetector {
     fileName: string,
     model: DetectionModel
   ): Promise<DetectionResult> {
-    const metadata = await sharp(filePath).metadata();
+    const pipeline = sharp(filePath);
+    let metadata;
+    try {
+      metadata = await pipeline.metadata();
+    } finally {
+      pipeline.destroy();
+    }
     const stats = fs.statSync(filePath);
     const fileSizeKB = stats.size / 1024;
 
@@ -140,7 +146,13 @@ export class ImageDetector {
     fileName: string,
     model: DetectionModel
   ): Promise<DetectionResult> {
-    const metadata = await sharp(filePath).metadata();
+    const pipeline = sharp(filePath);
+    let metadata;
+    try {
+      metadata = await pipeline.metadata();
+    } finally {
+      pipeline.destroy();
+    }
     const width = metadata.width ?? 0;
     const height = metadata.height ?? 0;
 
@@ -191,13 +203,24 @@ export class ImageDetector {
     model: DetectionModel
   ): Promise<DetectionResult> {
     // 先获取元数据确认格式
-    const metadata = await sharp(filePath).metadata();
+    const metaPipeline = sharp(filePath);
+    let metadata;
+    try {
+      metadata = await metaPipeline.metadata();
+    } finally {
+      metaPipeline.destroy();
+    }
 
     // 先缩放到合理大小以加速处理
-    const raw = await sharp(filePath)
+    const resizePipeline = sharp(filePath)
       .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
-      .raw()
-      .toBuffer({ resolveWithObject: true });
+      .raw();
+    let raw;
+    try {
+      raw = await resizePipeline.toBuffer({ resolveWithObject: true });
+    } finally {
+      resizePipeline.destroy();
+    }
 
     const { data, info } = raw;
     const { width, height, channels } = info;
@@ -206,11 +229,20 @@ export class ImageDetector {
     let pixelCount = 0;
 
     // 计算平均亮度 (使用感知亮度公式: 0.299*R + 0.587*G + 0.114*B)
+    // 灰度图（channels < 3）直接取单通道值
+    const isGrayscale = channels < 3;
+
     for (let i = 0; i < data.length; i += channels) {
-      const r = data[i];
-      const g = data[i + 1] ?? r;
-      const b = data[i + 2] ?? r;
-      const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+      let brightness: number;
+      if (isGrayscale) {
+        // 灰度图：单通道值即为亮度
+        brightness = data[i];
+      } else {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+      }
       totalBrightness += brightness;
       pixelCount++;
     }
@@ -247,6 +279,7 @@ export class ImageDetector {
         sampledWidth: width,
         sampledHeight: height,
         channels,
+        isGrayscale: channels < 3,
         darkThreshold: TOO_DARK,
         brightThreshold: TOO_BRIGHT,
         issue,

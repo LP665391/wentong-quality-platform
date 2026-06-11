@@ -81,12 +81,17 @@ export function generateDemoTextFile(content: string, fileName = 'demo.txt'): st
 }
 
 /**
- * 计算字符串的 MD5（简单实现，用于演示）
+ * 计算字符串的哈希值（Web Crypto API，用于演示）。
+ * 注意：浏览器 Web Crypto API 不支持 MD5，使用 SHA-256 替代。
+ * 如需 MD5，请通过 IPC 调用主进程的 hashFile。
  */
-export async function computeMD5(input: string): Promise<string> {
+export async function computeHash(input: string, algorithm: AlgorithmIdentifier = 'SHA-256'): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest(algorithm, data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
+
+/** @deprecated 使用 computeHash 替代。Web Crypto 不支持 MD5 */
+export const computeMD5 = computeHash;
