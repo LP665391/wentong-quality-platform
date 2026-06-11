@@ -326,7 +326,7 @@ function getFileUrl(filePath: string): string {
 async function selectDir(): Promise<void> {
   const api = getApi();
   if (!api?.selectDirectory) {
-    ElMessage.warning('目录选择功能仅在桌面应用中可用');
+    // 浏览器环境静默
     return;
   }
   try {
@@ -475,7 +475,7 @@ async function exportReport(): Promise<void> {
 
   const api = getApi();
   if (!api?.selectDirectory) {
-    ElMessage.warning('导出功能仅在桌面应用中可用');
+    // 浏览器环境静默
     return;
   }
 
@@ -533,7 +533,7 @@ async function exportReport(): Promise<void> {
         duration: 5000,
       });
     } else {
-      ElMessage.warning('文件写入功能仅在桌面应用中可用');
+      // 浏览器环境静默
     }
   } catch (err: any) {
     ElMessage.error(`导出失败：${err.message ?? err}`);

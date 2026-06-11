@@ -371,7 +371,7 @@ function formatValue(value: unknown): string {
 async function selectFile(): Promise<void> {
   const api = getApi();
   if (!api?.selectFile) {
-    ElMessage.warning('文件选择功能仅在桌面应用中可用');
+    // 浏览器环境静默，不弹窗
     return;
   }
   try {
@@ -392,7 +392,7 @@ async function selectFile(): Promise<void> {
 async function selectOutput(): Promise<void> {
   const api = getApi();
   if (!api?.selectDirectory) {
-    ElMessage.warning('目录选择功能仅在桌面应用中可用');
+    // 浏览器环境静默
     return;
   }
   try {
@@ -409,6 +409,13 @@ async function startValidation(): Promise<void> {
   if (!canStart.value) return;
 
   const api = getApi();
+  
+  // 演示模式：数据已加载，直接展示
+  if (report.value) {
+    ElMessage.info('演示数据已就绪，下方查看结果');
+    return;
+  }
+  
   if (!api?.createValidatorTask) {
     ElMessage.warning('数据校验功能仅在桌面应用中可用');
     return;
@@ -539,7 +546,7 @@ async function exportReport(format: 'excel' | 'json' | 'csv'): Promise<void> {
         ElMessage.error(res.error ?? '导出失败');
       }
     } else {
-      ElMessage.warning('导出功能仅在桌面应用中可用');
+      // 浏览器环境静默
     }
   } catch (err: any) {
     ElMessage.error(`导出失败：${err.message ?? err}`);
