@@ -262,11 +262,28 @@
               <el-descriptions-item label="有效期">
                 {{ licenseInfo?.expireDate ?? '永久有效' }}
               </el-descriptions-item>
+              <el-descriptions-item v-if="isTrialLicense" label="剩余天数" :span="2">
+                <div class="trial-countdown">
+                  <el-progress 
+                    :percentage="trialPercentage" 
+                    :color="trialProgressColor"
+                    :stroke-width="20"
+                    :text-inside="true"
+                    :format="() => `${trialRemainingDays} 天`"
+                  />
+                  <p class="trial-expire-tip" v-if="trialRemainingDays <= 7">
+                    ⚠️ 试用即将到期，请及时购买正式授权
+                  </p>
+                </div>
+              </el-descriptions-item>
             </el-descriptions>
           </div>
         </template>
         <template #extra>
           <el-button type="primary" @click="enterApp">进入应用</el-button>
+          <el-button v-if="isTrialLicense && trialRemainingDays <= 7" type="warning" @click="showPurchaseDialog">
+            购买正式授权
+          </el-button>
         </template>
       </el-result>
     </div>
@@ -274,9 +291,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   Connection,
   Document,
@@ -303,11 +320,30 @@ const machineId = ref('');
 const licenseInfo = ref<any>(null);
 const isAlreadyActivated = ref(false);
 const selectedFile = ref<File | null>(null);
+const trialRemainingDays = ref(30);
+const trialTotalDays = 30;
+let trialTimer: ReturnType<typeof setInterval> | null = null;
 
 const onlineForm = ref({
   licenseKey: '',
   customerName: '',
   company: '',
+});
+
+// ---------------------------------------------------------------------------
+// 计算属性
+// ---------------------------------------------------------------------------
+
+const isTrialLicense = computed(() => licenseInfo.value?.type === 'trial');
+
+const trialPercentage = computed(() => {
+  return Math.round((trialRemainingDays.value / trialTotalDays) * 100);
+});
+
+const trialProgressColor = computed(() => {
+  if (trialRemainingDays.value <= 3) return '#f56c6c'; // 红色
+  if (trialRemainingDays.value <= 7) return '#e6a23c'; // 橙色
+  return '#67c23a'; // 绿色
 });
 
 // ---------------------------------------------------------------------------
@@ -324,9 +360,31 @@ onMounted(async () => {
     if (status?.activated) {
       isAlreadyActivated.value = true;
       licenseInfo.value = status.licenseInfo;
+      
+      // 如果是试用授权，获取剩余天数
+      if (status.licenseInfo?.type === 'trial') {
+        const trialInfo: any = await window.api?.invoke?.('auth:getTrialInfo');
+        if (trialInfo) {
+          trialRemainingDays.value = trialInfo.remainingDays ?? 30;
+        }
+        // 启动定时器，每分钟更新一次
+        trialTimer = setInterval(async () => {
+          const info: any = await window.api?.invoke?.('auth:getTrialInfo');
+          if (info) {
+            trialRemainingDays.value = info.remainingDays ?? 30;
+          }
+        }, 60000);
+      }
     }
   } catch {
     // IPC 不可用时忽略
+  }
+});
+
+onUnmounted(() => {
+  if (trialTimer) {
+    clearInterval(trialTimer);
+    trialTimer = null;
   }
 });
 
@@ -444,6 +502,18 @@ function retryActivation() {
   currentStep.value = 0;
   selectedFile.value = null;
 }
+
+function showPurchaseDialog() {
+  ElMessageBox.alert(
+    '试用期即将到期，请联系销售获取正式授权：<br/><br/>📞 183 5281 1015<br/>📧 连云港文安档案科技有限公司',
+    '购买正式授权',
+    {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '我知道了',
+      type: 'warning',
+    }
+  );
+}
 </script>
 
 <style scoped>
@@ -545,6 +615,24 @@ function retryActivation() {
 .trial-info h3 {
   margin: 12px 0;
   font-size: 18px;
+}
+
+/* 试用期倒计时 */
+.trial-countdown {
+  width: 100%;
+  padding: 8px 0;
+}
+
+.trial-countdown .el-progress {
+  width: 100%;
+}
+
+.trial-expire-tip {
+  margin-top: 12px;
+  color: #e6a23c;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
 }
 
 .trial-info ul {

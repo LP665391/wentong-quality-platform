@@ -43,6 +43,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'auth:getMachineId',
   'auth:activate',
   'auth:startTrial',
+  'auth:getTrialInfo',
 ]);
 
 const ALLOWED_ON_CHANNELS = new Set([
@@ -220,6 +221,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startTrial: () => ipcRenderer.invoke('auth:startTrial'),
   getAuthStatus: () => ipcRenderer.invoke('auth:getStatus'),
   getMachineId: () => ipcRenderer.invoke('auth:getMachineId'),
+  getTrialInfo: () => ipcRenderer.invoke('auth:getTrialInfo'),
   activate: (method, data) => ipcRenderer.invoke('auth:activate', { method, ...data }),
 });
 
