@@ -36,6 +36,9 @@ export const useAppStore = defineStore('app', () => {
   /** 侧边栏是否折叠 */
   const sidebarCollapsed = ref(false);
 
+  /** 全局演示模式开关 */
+  const demoMode = ref(false);
+
   /** 当前活跃模块 */
   const currentModule = ref<ModuleKey>('home');
 
@@ -103,12 +106,18 @@ export const useAppStore = defineStore('app', () => {
     currentModule.value = module;
   }
 
+  /** 切换演示模式 */
+  function toggleDemoMode(): void {
+    demoMode.value = !demoMode.value;
+  }
+
   return {
     // state
     version,
     platform,
     loading,
     sidebarCollapsed,
+    demoMode,
     currentModule,
     // getters
     isMac,
@@ -117,6 +126,7 @@ export const useAppStore = defineStore('app', () => {
     // actions
     initApp,
     toggleSidebar,
+    toggleDemoMode,
     setCurrentModule,
   };
 });

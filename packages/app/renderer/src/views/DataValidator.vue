@@ -1,8 +1,14 @@
 <template>
   <div class="module-page">
     <div class="page-header">
-      <h2>📊 数据校验</h2>
-      <p class="page-desc">对 Excel/CSV 文件进行格式、内容、逻辑校验，快速发现数据问题</p>
+      <h2>
+        <template v-if="appStore.demoMode && report">📋 供应商来料质检</template>
+        <template v-else>📊 数据校验</template>
+      </h2>
+      <p class="page-desc" v-if="appStore.demoMode && report">
+        供应商每次发货附带 Excel 质检报告，人工核对 50 行数据需要 20 分钟。Ai质检平台 3 秒完成，零遗漏。
+      </p>
+      <p class="page-desc" v-else>对 Excel/CSV 文件进行格式、内容、逻辑校验，快速发现数据问题</p>
     </div>
 
     <!-- ── 步骤一：选择文件 ── -->
@@ -163,6 +169,37 @@
         </el-col>
       </el-row>
 
+      <!-- 对比面板（演示模式） -->
+      <div v-if="appStore.demoMode && comparisonData.length > 0" class="comparison-section">
+        <div class="comparison-header" @click="showComparison = !showComparison">
+          <span>⚖️ {{ showComparison ? '收起对比' : '查看对比：人工 vs Ai质检平台' }}</span>
+          <span class="comparison-toggle">{{ showComparison ? '▲' : '▼' }}</span>
+        </div>
+        <div v-if="showComparison" class="comparison-body">
+          <div class="comparison-row comparison-row--header">
+            <div class="comparison-cell"></div>
+            <div class="comparison-cell comparison-cell--manual">
+              <el-icon><User /></el-icon> 人工核对
+            </div>
+            <div class="comparison-cell comparison-cell--ai">
+              <el-icon><Monitor /></el-icon> Ai质检平台
+            </div>
+          </div>
+          <div
+            v-for="row in comparisonData"
+            :key="row.label"
+            class="comparison-row"
+          >
+            <div class="comparison-cell comparison-cell--label">{{ row.label }}</div>
+            <div class="comparison-cell comparison-cell--manual">{{ row.manual }}</div>
+            <div class="comparison-cell comparison-cell--ai" :class="{ 'comparison-cell--better': row.aiBetter }">
+              {{ row.ai }}
+              <span v-if="row.aiBetter" class="comparison-check">✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 导出按钮 -->
       <div class="export-row">
         <span class="export-label">导出报告：</span>
@@ -241,14 +278,64 @@
         </el-table-column>
       </el-table>
     </div>
+
+    <!-- 报告预览弹窗（演示模式） -->
+    <div v-if="showReportPreview && report" class="report-preview-overlay" @click.self="showReportPreview = false">
+      <div class="report-preview-card">
+        <h3>📋 质检报告预览</h3>
+        <div class="preview-stats">
+          <div class="preview-stat">
+            <div class="preview-stat__value">{{ report.totalRows }}</div>
+            <div class="preview-stat__label">数据行数</div>
+          </div>
+          <div class="preview-stat">
+            <div class="preview-stat__value preview-stat__value--error">{{ report.totalErrors }}</div>
+            <div class="preview-stat__label">错误</div>
+          </div>
+          <div class="preview-stat">
+            <div class="preview-stat__value preview-stat__value--warning">{{ report.totalWarnings }}</div>
+            <div class="preview-stat__label">警告</div>
+          </div>
+          <div class="preview-stat">
+            <div class="preview-stat__value">{{ formatDuration(report.duration) }}</div>
+            <div class="preview-stat__label">耗时</div>
+          </div>
+        </div>
+        <div class="preview-sample">
+          <div class="preview-sample__header">错误明细（前 4 条）</div>
+          <table class="preview-sample__table">
+            <thead>
+              <tr><th>行号</th><th>字段</th><th>问题描述</th><th>建议</th><th>严重程度</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(err, i) in report.errors.slice(0, 4)" :key="i"
+                  :class="err.severity === 'error' ? 'row-error' : 'row-warning'">
+                <td>{{ err.rowNumber }}</td>
+                <td>{{ err.fieldName }}</td>
+                <td>{{ err.description }}</td>
+                <td>{{ err.suggestion || '—' }}</td>
+                <td>{{ err.severity === 'error' ? '🔴 错误' : '🟡 警告' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="preview-footer">
+          Ai质检平台生成 · {{ new Date().toLocaleDateString('zh-CN') }} · 页脚含防伪水印
+        </div>
+        <div style="text-align: center; margin-top: 16px">
+          <el-button type="primary" @click="showReportPreview = false">关闭预览</el-button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
-import { Download } from '@element-plus/icons-vue';
-import { generateDemoCSV } from '@/utils/demo-data';
+import { Download, Monitor, User } from '@element-plus/icons-vue';
+import { useAppStore } from '@/stores/app';
+import { generateSupplierQCReport, COMPARISON_DATA, type ComparisonData } from '@/utils/demo-scenarios';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -308,6 +395,10 @@ const progressMessage = ref('');
 
 const taskId = ref('');
 const report = ref<ValidationReport | null>(null);
+const showComparison = ref(false);
+const showReportPreview = ref(false);
+const comparisonData = ref<ComparisonData[]>([]);
+const appStore = useAppStore();
 
 // ---------------------------------------------------------------------------
 // Computed
@@ -506,6 +597,12 @@ async function cancelValidation(): Promise<void> {
 async function exportReport(format: 'excel' | 'json' | 'csv'): Promise<void> {
   if (!report.value) return;
 
+  // 演示模式：弹出报告预览
+  if (appStore.demoMode) {
+    showReportPreview.value = true;
+    return;
+  }
+
   const api = getApi();
 
   // 1) 确定输出路径
@@ -556,35 +653,33 @@ async function exportReport(format: 'excel' | 'json' | 'csv'): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 生命周期
+// ---------------------------------------------------------------------------
+
+onMounted(() => {
+  // 检查是否从首页场景入口跳转过来
+  const scenario = sessionStorage.getItem('demoScenario');
+  if (scenario === 'supplier-qc') {
+    sessionStorage.removeItem('demoScenario');
+    loadDemoData();
+  }
+});
+
+// ---------------------------------------------------------------------------
 // 演示模式：加载内置数据并模拟校验
+// ---------------------------------------------------------------------------
+
 function loadDemoData() {
-  filePath.value = '📋 演示数据 (员工信息表)';
-  
-  // 模拟校验报告
-  report.value = {
-    taskId: 'demo-001',
-    fileName: '员工信息表.csv',
-    fileType: 'csv',
-    totalRows: 10,
-    totalErrors: 4,
-    totalWarnings: 2,
-    duration: 1250,
-    completedAt: new Date().toISOString(),
-    ruleResults: [
-      { ruleType: 'required', ruleName: '必填校验', errorCount: 2, warningCount: 0 },
-      { ruleType: 'format', ruleName: '格式校验', errorCount: 2, warningCount: 0 },
-      { ruleType: 'range', ruleName: '范围校验', errorCount: 0, warningCount: 2 },
-    ],
-    errors: [
-      { rowNumber: 3, fieldName: '年龄', errorType: '范围超限', description: '年龄 150 超出合理范围 [0, 120]', suggestion: '请输入有效年龄', severity: 'warning', value: '150' },
-      { rowNumber: 3, fieldName: '邮箱', errorType: '格式错误', description: '邮箱格式不正确', suggestion: '请输入正确邮箱格式', severity: 'error', value: 'lisi@company' },
-      { rowNumber: 4, fieldName: '姓名', errorType: '必填为空', description: '姓名为必填字段，不能为空', suggestion: '请填写姓名', severity: 'error', value: '' },
-      { rowNumber: 5, fieldName: '手机', errorType: '格式错误', description: '手机号位数不正确', suggestion: '请输入11位手机号', severity: 'error', value: '138001380022' },
-      { rowNumber: 7, fieldName: '姓名', errorType: '必填为空', description: '姓名为必填字段，不能为空', suggestion: '请填写姓名', severity: 'error', value: '' },
-      { rowNumber: 8, fieldName: '状态', errorType: '枚举超限', description: '状态"未知"不在允许范围内', suggestion: '可选值：在职、离职', severity: 'warning', value: '未知' },
-    ],
-  };
-  ElNotification({ title: '演示数据已加载', message: '包含 10 行员工信息，发现 4 个错误 + 2 个警告', type: 'success' });
+  filePath.value = '📋 2026年6月_供应商来料检验报告.xlsx';
+  preset.value = 'standard';
+  report.value = generateSupplierQCReport() as ValidationReport;
+  comparisonData.value = COMPARISON_DATA['supplier-qc'] ?? [];
+  ElNotification({
+    title: '供应商来料质检 · 演示数据已加载',
+    message: `50 行数据，发现 ${report.value.totalErrors} 个错误 + ${report.value.totalWarnings} 个警告`,
+    type: 'success',
+  });
 }
 </script>
 
@@ -760,5 +855,208 @@ function loadDemoData() {
   font-size: 12px;
   color: #606266;
   word-break: break-all;
+}
+
+/* ── 对比面板 ── */
+.comparison-section {
+  margin-top: 20px;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.comparison-header {
+  background: #f5f7fa;
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+  user-select: none;
+}
+
+.comparison-header:hover {
+  background: #ebeef5;
+}
+
+.comparison-toggle {
+  color: #909399;
+  font-size: 12px;
+}
+
+.comparison-body {
+  padding: 12px 16px;
+}
+
+.comparison-row {
+  display: flex;
+  border-bottom: 1px solid #f2f3f5;
+  padding: 8px 0;
+}
+
+.comparison-row:last-child {
+  border-bottom: none;
+}
+
+.comparison-row--header {
+  font-weight: 600;
+  color: #303133;
+  border-bottom: 2px solid #dcdfe6;
+  padding-bottom: 10px;
+}
+
+.comparison-cell {
+  flex: 1;
+  font-size: 13px;
+  color: #606266;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.comparison-cell--label {
+  font-weight: 500;
+  color: #303133;
+  max-width: 120px;
+}
+
+.comparison-cell--manual {
+  color: #909399;
+}
+
+.comparison-cell--ai {
+  color: #303133;
+}
+
+.comparison-cell--better {
+  color: #67c23a;
+  font-weight: 500;
+}
+
+.comparison-check {
+  color: #67c23a;
+  margin-left: 4px;
+}
+
+/* ── 报告预览弹窗 ── */
+.report-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-preview-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.report-preview-card h3 {
+  font-size: 20px;
+  color: #1d2129;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.preview-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.preview-stat {
+  text-align: center;
+  padding: 16px 12px;
+  border-radius: 8px;
+  background: #f5f7fa;
+}
+
+.preview-stat__value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1d2129;
+}
+
+.preview-stat__value--error {
+  color: #f56c6c;
+}
+
+.preview-stat__value--warning {
+  color: #e6a23c;
+}
+
+.preview-stat__label {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+}
+
+.preview-sample {
+  background: #fafbfc;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.preview-sample__header {
+  background: #1677ff;
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.preview-sample__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.preview-sample__table th {
+  background: #f0f2f5;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #303133;
+  border-bottom: 2px solid #dcdfe6;
+}
+
+.preview-sample__table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid #f2f3f5;
+  color: #606266;
+}
+
+.preview-sample__table tr.row-error td {
+  background: #fef0f0;
+}
+
+.preview-sample__table tr.row-warning td {
+  background: #fdf6ec;
+}
+
+.preview-footer {
+  text-align: center;
+  color: #909399;
+  font-size: 13px;
+  padding-top: 12px;
+  border-top: 1px solid #ebeef5;
 }
 </style>

@@ -73,15 +73,21 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   // 浏览器开发环境：跳过激活检查，直接放行
-  const electronAPI = (window as any).electronAPI ?? (window as any).api;
-  if (!electronAPI) {
+  const api = (window as any).api;
+  const electronAPI = (window as any).electronAPI;
+  if (!api && !electronAPI) {
     next();
     return;
   }
 
   // 检查激活状态（通过 IPC 调用主进程）
   try {
-    const authStatus = await electronAPI.invoke?.('auth:getStatus');
+    let authStatus: any;
+    if (api?.invoke) {
+      authStatus = await api.invoke('auth:getStatus');
+    } else if (electronAPI?.getAuthStatus) {
+      authStatus = await electronAPI.getAuthStatus();
+    }
 
     if (authStatus?.activated || authStatus?.trialActive) {
       next();
@@ -90,7 +96,6 @@ router.beforeEach(async (to, _from, next) => {
     }
   } catch {
     // IPC 调用失败（主进程未就绪等），重定向到激活页面以确保安全
-    // 不能直接放行，否则会绕过激活检查
     next({ name: 'Activation' });
   }
 });

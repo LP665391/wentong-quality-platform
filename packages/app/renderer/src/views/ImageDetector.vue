@@ -1,8 +1,14 @@
 <template>
   <div class="module-page">
     <div class="page-header">
-      <h2>🖼️ 图像检测</h2>
-      <p class="page-desc">批量检测图像质量，AI 驱动，支持清晰度、尺寸、亮度检测</p>
+      <h2>
+        <template v-if="appStore.demoMode && results.length > 0">🖼️ 产品图片批量筛查</template>
+        <template v-else>🖼️ 图像检测</template>
+      </h2>
+      <p class="page-desc" v-if="appStore.demoMode && results.length > 0">
+        100 张产品图片人工逐一检查需要 2 小时。Ai质检平台 10 秒完成，不合格图片自动标红。
+      </p>
+      <p class="page-desc" v-else>批量检测图像质量，支持清晰度、尺寸、亮度检测</p>
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════════
@@ -210,8 +216,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
+import { useAppStore } from '@/stores/app';
+import { generateImageScreeningResults, COMPARISON_DATA, type ComparisonData, type DemoImageResult } from '@/utils/demo-scenarios';
+import { generateDemoImage } from '@/utils/demo-data';
 import { Download, FolderOpened, Delete } from '@element-plus/icons-vue';
 
 // ---------------------------------------------------------------------------
@@ -248,6 +257,9 @@ const concurrency = ref(4);
 const threshold = ref(50);
 const running = ref(false);
 const exporting = ref(false);
+const showComparison = ref(false);
+const comparisonData = ref<ComparisonData[]>([]);
+const appStore = useAppStore();
 
 // 是否浏览器环境（非 Electron）
 const isBrowser = computed(() => !(window as any).electronAPI && !(window as any).api);
@@ -548,20 +560,52 @@ function resetResults(): void {
   taskId.value = '';
 }
 
-// 演示模式：加载内置图片并模拟检测
+// ---------------------------------------------------------------------------
+// 生命周期
+// ---------------------------------------------------------------------------
+
+onMounted(() => {
+  const scenario = sessionStorage.getItem('demoScenario');
+  if (scenario === 'image-screening') {
+    sessionStorage.removeItem('demoScenario');
+    loadDemoImages();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 演示模式：加载内置图片并生成真实缩略图
+// ---------------------------------------------------------------------------
+
 function loadDemoImages() {
-  dirPath.value = '📁 演示图片目录';
-  
-  results.value = [
-    { fileName: 'product-001.jpg', filePath: '/demo/product-001.jpg', isQualified: true,  score: 95, modelUsed: 'clarity', details: { resolution: '1920x1080', size: '245KB' } },
-    { fileName: 'product-002.jpg', filePath: '/demo/product-002.jpg', isQualified: true,  score: 88, modelUsed: 'clarity', details: { resolution: '800x600', size: '120KB' } },
-    { fileName: 'product-003.jpg', filePath: '/demo/product-003.jpg', isQualified: false, score: 15, modelUsed: 'clarity', details: { resolution: '100x50', size: '3KB', reason: '分辨率过低' } },
-    { fileName: 'product-004.png', filePath: '/demo/product-004.png', isQualified: true,  score: 92, modelUsed: 'clarity', details: { resolution: '1280x720', size: '180KB' } },
-    { fileName: 'product-005.jpg', filePath: '/demo/product-005.jpg', isQualified: true,  score: 78, modelUsed: 'clarity', details: { resolution: '640x480', size: '85KB' } },
-    { fileName: 'scan-001.jpg',    filePath: '/demo/scan-001.jpg',    isQualified: false, score: 40, modelUsed: 'clarity', details: { resolution: '200x200', size: '25KB', reason: '尺寸偏小' } },
-  ];
-  
-  ElNotification({ title: '演示数据已加载', message: '6 张检测图片，合格率 66.7%', type: 'success' });
+  dirPath.value = '📁 产品图片目录 (20张)';
+  const demoResults = generateImageScreeningResults();
+  comparisonData.value = COMPARISON_DATA['image-screening'] ?? [];
+
+  // 为每张图生成真实的 Canvas 缩略图
+  results.value = demoResults.map((r) => {
+    const w = (r.details.width as number) || 320;
+    const h = (r.details.height as number) || 240;
+    // 用 Canvas 生成缩略图 Blob URL
+    const thumbnailUrl = generateDemoImage(
+      Math.min(w, 320),
+      Math.min(h, 240),
+    );
+    return {
+      fileName: r.fileName,
+      filePath: thumbnailUrl, // Blob URL，浏览器可显示
+      isQualified: r.isQualified,
+      score: r.score,
+      modelUsed: r.modelUsed,
+      details: r.details,
+    };
+  });
+
+  const qualified = results.value.filter((r) => r.isQualified).length;
+  ElNotification({
+    title: '产品图片批量筛查 · 演示数据已加载',
+    message: `20 张图片，合格 ${qualified} 张，不合格 ${20 - qualified} 张`,
+    type: 'success',
+  });
 }
 </script>
 

@@ -1,12 +1,17 @@
 <template>
   <footer class="statusbar">
-    <!-- 左侧：授权状态 + 版本号 -->
+    <!-- 左侧：授权状态 + 演示模式 + 版本号 -->
     <div class="statusbar__left">
       <span class="statusbar__item">
         <span class="status-indicator status-indicator--active" />
         <span>已授权</span>
       </span>
       <span class="statusbar__divider">|</span>
+      <span v-if="appStore.demoMode" class="statusbar__item">
+        <span class="status-indicator status-indicator--demo" />
+        <span>演示中</span>
+      </span>
+      <span v-if="appStore.demoMode" class="statusbar__divider">|</span>
       <span class="statusbar__item statusbar__version">
         v{{ appStore.version }}
       </span>
@@ -142,6 +147,17 @@ onUnmounted(() => {
 .status-indicator--active {
   background: #67c23a;
   box-shadow: 0 0 4px rgba(103, 194, 58, 0.5);
+}
+
+.status-indicator--demo {
+  background: #e6a23c;
+  box-shadow: 0 0 4px rgba(230, 162, 60, 0.5);
+  animation: demo-pulse 2s ease-in-out infinite;
+}
+
+@keyframes demo-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 /* ---- 版本号 ---- */
