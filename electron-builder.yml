@@ -1,0 +1,50 @@
+appId: com.wentong.ai-quality-inspector
+productName: 文通Ai质检平台
+copyright: Copyright © 2026 WenTong
+
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - packages/**/dist/**/*
+  - node_modules/**/*
+  - "!node_modules/**/*.{md,ts,map,flow}"
+  - "!node_modules/.cache/**"
+  - "!node_modules/**/docs/**"
+  - "!node_modules/**/test/**"
+  - "!node_modules/**/tests/**"
+
+asar: true
+asarUnpack:
+  - "**/*.node"
+  - "**/onnxruntime-node/**"
+
+mac:
+  target:
+    - dmg
+    - zip
+  icon: resources/icons/icon.icns
+  category: public.app-category.business
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+
+win:
+  target:
+    - nsis
+    - portable
+  icon: resources/icons/icon.ico
+  artifactName: "${productName}-${version}-setup.${ext}"
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 文通Ai质检平台
+
+linux:
+  target:
+    - AppImage
+  icon: resources/icons/icon.png
+  category: Office
