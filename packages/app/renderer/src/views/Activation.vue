@@ -316,11 +316,11 @@ const onlineForm = ref({
 
 onMounted(async () => {
   // 获取机器 ID
-  machineId.value = await window.api?.invoke?.('auth:getMachineId') ?? '无法获取';
+  machineId.value = (await window.api?.invoke?.('auth:getMachineId') as unknown as string) ?? '无法获取';
 
   // 检查激活状态
   try {
-    const status = await window.api?.invoke?.('auth:getStatus');
+    const status: any = await window.api?.invoke?.('auth:getStatus');
     if (status?.activated) {
       isAlreadyActivated.value = true;
       licenseInfo.value = status.licenseInfo;
@@ -359,7 +359,7 @@ async function handleActivateOnline() {
   activatingOnline.value = true;
   try {
     // 调用主进程 IPC
-    const result = await window.api?.invoke?.('auth:activate', {
+    const result: any = await window.api?.invoke?.('auth:activate', {
       method: 'online',
       licenseKey: onlineForm.value.licenseKey,
     });
@@ -392,7 +392,7 @@ async function handleActivateOffline() {
     // 读取文件内容并通过 IPC 发送
     const fileContent = await selectedFile.value.text();
 
-    const result = await window.api?.invoke?.('auth:activate', {
+    const result: any = await window.api?.invoke?.('auth:activate', {
       method: 'offline',
       fileContent,
     });
@@ -417,7 +417,7 @@ async function handleActivateOffline() {
 async function handleStartTrial() {
   startingTrial.value = true;
   try {
-    const result = await window.api?.invoke?.('auth:startTrial');
+    const result: any = await window.api?.invoke?.('auth:startTrial');
 
     if (result?.success) {
       activationResult.value = 'trial';
