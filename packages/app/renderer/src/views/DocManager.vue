@@ -1,14 +1,8 @@
 <template>
   <div class="module-page">
     <div class="page-header">
-      <h2>
-        <template v-if="appStore.demoMode && result">📋 供应商来料质检 · 字段提取</template>
-        <template v-else>📋 文档管理</template>
-      </h2>
-      <p class="page-desc" v-if="appStore.demoMode && result">
-        从供应商 Excel 报告中自动提取 24 个预定义字段，模糊匹配表头，秒级完成。
-      </p>
-      <p class="page-desc" v-else>从 Excel 表格自动提取指定字段，生成结构化数据</p>
+      <h2>📋 文档管理</h2>
+      <p class="page-desc">从 Excel 表格自动提取指定字段，生成结构化数据</p>
     </div>
 
     <!-- ── 步骤一：选择文件 ── -->
@@ -228,11 +222,7 @@ const progressType = ref<'info' | 'success' | 'warning' | 'error'>('info');
 const appStore = useAppStore();
 
 onMounted(() => {
-  const scenario = sessionStorage.getItem('demoScenario');
-  if (scenario === 'supplier-qc') {
-    sessionStorage.removeItem('demoScenario');
-    loadDemoData();
-  }
+  // 桌面版不自动加载演示数据
 });
 
 function loadDemoData() {

@@ -1,14 +1,8 @@
 <template>
   <div class="module-page">
     <div class="page-header">
-      <h2>
-        <template v-if="appStore.demoMode && report">📋 供应商来料质检</template>
-        <template v-else>📊 数据校验</template>
-      </h2>
-      <p class="page-desc" v-if="appStore.demoMode && report">
-        供应商每次发货附带 Excel 质检报告，人工核对 50 行数据需要 20 分钟。Ai质检平台 3 秒完成，零遗漏。
-      </p>
-      <p class="page-desc" v-else>对 Excel/CSV 文件进行格式、内容、逻辑校验，快速发现数据问题</p>
+      <h2>📊 数据校验</h2>
+      <p class="page-desc">对 Excel/CSV 文件进行格式、内容、逻辑校验，快速发现数据问题</p>
     </div>
 
     <!-- ── 步骤一：选择文件 ── -->
@@ -31,7 +25,7 @@
               浏览
             </el-button>
             <el-button type="success" v-if="isBrowser" @click="loadDemoData" :disabled="validating" plain>
-              🎯 加载演示数据
+               加载演示数据
             </el-button>
           </div>
         </el-form-item>
@@ -169,37 +163,6 @@
         </el-col>
       </el-row>
 
-      <!-- 对比面板（演示模式） -->
-      <div v-if="appStore.demoMode && comparisonData.length > 0" class="comparison-section">
-        <div class="comparison-header" @click="showComparison = !showComparison">
-          <span>⚖️ {{ showComparison ? '收起对比' : '查看对比：人工 vs Ai质检平台' }}</span>
-          <span class="comparison-toggle">{{ showComparison ? '▲' : '▼' }}</span>
-        </div>
-        <div v-if="showComparison" class="comparison-body">
-          <div class="comparison-row comparison-row--header">
-            <div class="comparison-cell"></div>
-            <div class="comparison-cell comparison-cell--manual">
-              <el-icon><User /></el-icon> 人工核对
-            </div>
-            <div class="comparison-cell comparison-cell--ai">
-              <el-icon><Monitor /></el-icon> Ai质检平台
-            </div>
-          </div>
-          <div
-            v-for="row in comparisonData"
-            :key="row.label"
-            class="comparison-row"
-          >
-            <div class="comparison-cell comparison-cell--label">{{ row.label }}</div>
-            <div class="comparison-cell comparison-cell--manual">{{ row.manual }}</div>
-            <div class="comparison-cell comparison-cell--ai" :class="{ 'comparison-cell--better': row.aiBetter }">
-              {{ row.ai }}
-              <span v-if="row.aiBetter" class="comparison-check">✓</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- 导出按钮 -->
       <div class="export-row">
         <span class="export-label">导出报告：</span>
@@ -249,7 +212,7 @@
               size="small"
               effect="dark"
             >
-              {{ row.errorType }}
+              {{ getErrorTypeLabel(row.errorType) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -335,7 +298,7 @@ import { ref, computed, onMounted } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
 import { Download, Monitor, User } from '@element-plus/icons-vue';
 import { useAppStore } from '@/stores/app';
-import { generateSupplierQCReport, COMPARISON_DATA, type ComparisonData } from '@/utils/demo-scenarios';
+import { type ComparisonData } from '@/utils/demo-scenarios';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -395,10 +358,24 @@ const progressMessage = ref('');
 
 const taskId = ref('');
 const report = ref<ValidationReport | null>(null);
-const showComparison = ref(false);
 const showReportPreview = ref(false);
-const comparisonData = ref<ComparisonData[]>([]);
 const appStore = useAppStore();
+
+// 错误类型中文标签映射
+const errorTypeLabels: Record<string, string> = {
+  not_a_number: '非数字',
+  number_out_of_range: '数值超范围',
+  enum_out_of_range: '枚举值超范围',
+  length_out_of_range: '长度超范围',
+  column_not_found: '列未找到',
+  required: '必填缺失',
+  unknown_format: '未知格式',
+  format_mismatch: '格式不匹配',
+};
+
+function getErrorTypeLabel(type: string): string {
+  return errorTypeLabels[type] ?? type;
+}
 
 // ---------------------------------------------------------------------------
 // Computed
@@ -501,12 +478,6 @@ async function startValidation(): Promise<void> {
 
   const api = getApi();
   
-  // 演示模式：数据已加载，直接展示
-  if (report.value) {
-    ElMessage.info('演示数据已就绪，下方查看结果');
-    return;
-  }
-  
   if (!api?.createValidatorTask) {
     ElMessage.warning('数据校验功能仅在桌面应用中可用');
     return;
@@ -597,12 +568,6 @@ async function cancelValidation(): Promise<void> {
 async function exportReport(format: 'excel' | 'json' | 'csv'): Promise<void> {
   if (!report.value) return;
 
-  // 演示模式：弹出报告预览
-  if (appStore.demoMode) {
-    showReportPreview.value = true;
-    return;
-  }
-
   const api = getApi();
 
   // 1) 确定输出路径
@@ -658,12 +623,7 @@ async function exportReport(format: 'excel' | 'json' | 'csv'): Promise<void> {
 // ---------------------------------------------------------------------------
 
 onMounted(() => {
-  // 检查是否从首页场景入口跳转过来
-  const scenario = sessionStorage.getItem('demoScenario');
-  if (scenario === 'supplier-qc') {
-    sessionStorage.removeItem('demoScenario');
-    loadDemoData();
-  }
+  // 桌面版不自动加载演示数据
 });
 
 // ---------------------------------------------------------------------------
@@ -671,10 +631,9 @@ onMounted(() => {
 // ---------------------------------------------------------------------------
 
 function loadDemoData() {
-  filePath.value = '📋 2026年6月_供应商来料检验报告.xlsx';
+  filePath.value = '📋 2026年 6 月_供应商来料检验报告.xlsx';
   preset.value = 'standard';
   report.value = generateSupplierQCReport() as ValidationReport;
-  comparisonData.value = COMPARISON_DATA['supplier-qc'] ?? [];
   ElNotification({
     title: '供应商来料质检 · 演示数据已加载',
     message: `50 行数据，发现 ${report.value.totalErrors} 个错误 + ${report.value.totalWarnings} 个警告`,

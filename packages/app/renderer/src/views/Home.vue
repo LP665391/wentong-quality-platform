@@ -231,14 +231,9 @@ function animateStats() {
 // 方法
 // ---------------------------------------------------------------------------
 
-/** 点击场景卡片 → 开启演示模式 + 跳转 */
+/** 点击场景卡片 → 跳转（桌面版已禁用演示模式） */
 function goScenario(route: string, scenarioId: string) {
-  // 自动开启演示模式
-  if (!appStore.demoMode) {
-    appStore.toggleDemoMode();
-  }
-  // 将场景 ID 存到 sessionStorage，目标页面读取后自动加载对应数据
-  sessionStorage.setItem('demoScenario', scenarioId);
+  // 桌面版不启用演示模式，直接跳转
   router.push(route);
 }
 

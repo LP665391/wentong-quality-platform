@@ -1,14 +1,8 @@
 <template>
   <div class="module-page">
     <div class="page-header">
-      <h2>
-        <template v-if="appStore.demoMode && results.length > 0">🖼️ 产品图片批量筛查</template>
-        <template v-else>🖼️ 图像检测</template>
-      </h2>
-      <p class="page-desc" v-if="appStore.demoMode && results.length > 0">
-        100 张产品图片人工逐一检查需要 2 小时。Ai质检平台 10 秒完成，不合格图片自动标红。
-      </p>
-      <p class="page-desc" v-else>批量检测图像质量，支持清晰度、尺寸、亮度检测</p>
+      <h2>🖼️ 图像检测</h2>
+      <p class="page-desc">批量检测图像质量，支持清晰度、尺寸、亮度检测</p>
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════════
@@ -356,12 +350,6 @@ async function startDetection(): Promise<void> {
 
   const api = getApi();
   
-  // 演示模式：数据已加载，直接展示
-  if (results.value.length > 0) {
-    ElMessage.info('演示数据已就绪，下方查看结果');
-    return;
-  }
-  
   if (!api?.createImageDetectorTask) {
     ElMessage.warning('图像检测功能仅在桌面应用中可用');
     return;
@@ -565,11 +553,7 @@ function resetResults(): void {
 // ---------------------------------------------------------------------------
 
 onMounted(() => {
-  const scenario = sessionStorage.getItem('demoScenario');
-  if (scenario === 'image-screening') {
-    sessionStorage.removeItem('demoScenario');
-    loadDemoImages();
-  }
+  // 桌面版不自动加载演示数据
 });
 
 // ---------------------------------------------------------------------------

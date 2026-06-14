@@ -36,7 +36,7 @@ export const useAppStore = defineStore('app', () => {
   /** 侧边栏是否折叠 */
   const sidebarCollapsed = ref(false);
 
-  /** 全局演示模式开关 */
+  /** 全局演示模式开关（桌面版禁用） */
   const demoMode = ref(false);
 
   /** 当前活跃模块 */
