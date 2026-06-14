@@ -1,0 +1,139 @@
+name: 构建安装包
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:      # 支持手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    name: macOS 构建 (ARM64)
+    runs-on: macos-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 编译所有模块
+        run: pnpm build:all
+
+      - name: 打包 macOS (ARM64)
+        run: npx electron-builder --mac --arm64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 上传 macOS 安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-installer
+          path: release/*.dmg
+          if-no-files-found: warn
+
+  build-mac-x64:
+    name: macOS 构建 (Intel)
+    runs-on: macos-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 编译所有模块
+        run: pnpm build:all
+
+      - name: 打包 macOS (Intel)
+        run: npx electron-builder --mac --x64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 上传 macOS Intel 安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-intel-installer
+          path: release/*.dmg
+          if-no-files-found: warn
+
+  build-win:
+    name: Windows 构建
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 编译所有模块
+        run: pnpm build:all
+
+      - name: 打包 Windows
+        run: npx electron-builder --win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 上传 Windows 安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-installer
+          path: release/*.exe
+          if-no-files-found: warn
+
+  release:
+    name: 发布 Release
+    needs: [build-mac, build-win]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载所有安装包
+        uses: actions/download-artifact@v4
+
+      - name: 创建 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            mac-installer/*.dmg
+            win-installer/*.exe
+          generate_release_notes: true
