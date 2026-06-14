@@ -294,7 +294,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
 import { Download, Monitor, User } from '@element-plus/icons-vue';
 import { useAppStore } from '@/stores/app';
@@ -522,6 +522,9 @@ async function startValidation(): Promise<void> {
 
     if (runRes.success) {
       report.value = runRes.report as ValidationReport;
+      // 立即结束校验状态，避免按钮卡在"校验中..."
+      validating.value = false;
+      await nextTick(); // 确保 DOM 更新完成
       ElNotification({
         title: '校验完成',
         message: `发现 ${report.value!.totalErrors} 个错误，${report.value!.totalWarnings} 个警告`,
@@ -529,6 +532,8 @@ async function startValidation(): Promise<void> {
         duration: 5000,
       });
     } else {
+      validating.value = false;
+      await nextTick();
       ElNotification({
         title: '校验失败',
         message: runRes.error ?? '未知错误',
@@ -537,14 +542,14 @@ async function startValidation(): Promise<void> {
       });
     }
   } catch (err: any) {
+    validating.value = false;
+    await nextTick();
     ElNotification({
       title: '校验异常',
       message: err.message ?? String(err),
       type: 'error',
       duration: 8000,
     });
-  } finally {
-    validating.value = false;
   }
 }
 
