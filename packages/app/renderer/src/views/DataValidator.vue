@@ -253,9 +253,9 @@
 
       <!-- 文件列表 -->
       <div class="batch-result-list">
-        <div v-for="(report, filePath) in batchReports" :key="filePath" class="batch-result-item">
+        <div v-for="[filePath, report] in Array.from(batchReports)" :key="filePath" class="batch-result-item">
           <el-icon><Document /></el-icon>
-          <span class="file-name">{{ getFileName(filePath as string) }}</span>
+          <span class="file-name">{{ getFileName(filePath) }}</span>
           <el-tag
             :type="report.grade === 'pass' ? 'success' : report.grade === 'warning' ? 'warning' : 'danger'"
             size="small"
@@ -462,7 +462,7 @@ import { ref, computed, onMounted, nextTick } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
 import { Download, Monitor, User, InfoFilled, Document, Close } from '@element-plus/icons-vue';
 import { useAppStore } from '@/stores/app';
-import { type ComparisonData } from '@/utils/demo-scenarios';
+import { type ComparisonData, generateSupplierQCReport } from '@/utils/demo-scenarios';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -513,6 +513,8 @@ interface ValidationReport {
   errors: ValidationError[];
   duration: number;
   completedAt: string;
+  grade?: 'pass' | 'warning' | 'fail';
+  gradeLabel?: string;
 }
 
 // ---------------------------------------------------------------------------

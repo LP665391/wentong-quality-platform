@@ -197,6 +197,8 @@ export function generateSupplierQCReport(): ValidationReport {
     ],
     duration: 1823,
     completedAt: new Date().toISOString(),
+    grade: 'fail',
+    gradeLabel: '需返工',
   };
 }
 

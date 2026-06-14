@@ -22,6 +22,13 @@ const processors = new Map<string, BatchProcessor>();
 /** 取消标志，以 taskId 为键 */
 const cancelFlags = new Map<string, boolean>();
 
+// 预设模式名称映射
+const presetNames: Record<string, string> = {
+  archive: '保存级',
+  access: '利用级',
+  quick: '快速筛查',
+};
+
 // ---------------------------------------------------------------------------
 // 导出注册函数
 // ---------------------------------------------------------------------------
@@ -40,23 +47,24 @@ export function setupImageDetectorIpc(): void {
       _event,
       params: {
         dirPath: string;
-        modelId: string;
+        presetId: string;
         options?: {
           recursive?: boolean;
           concurrency?: number;
         };
       },
     ) => {
-      const { dirPath, modelId, options } = params;
+      const { dirPath, presetId, options } = params;
       const { recursive = false, concurrency = 4 } = options ?? {};
+      const presetName = presetNames[presetId] || presetId;
 
       // 1) 创建数据库任务记录
       const repo = getRepository();
       const task = repo.createTask({
         module: 'image',
-        task_name: `图像检测 - ${dirPath.split(/[/\\]/).pop() ?? 'unknown'} (${modelId})`,
+        task_name: `档案图像检测 - ${dirPath.split(/[/\\]/).pop() ?? 'unknown'} (${presetName})`,
         input_path: dirPath,
-        config_json: JSON.stringify({ modelId, recursive, concurrency }),
+        config_json: JSON.stringify({ presetId, recursive, concurrency }),
       });
 
       // 2) 创建检测器 + 批量处理器
@@ -79,14 +87,14 @@ export function setupImageDetectorIpc(): void {
       params: {
         taskId: string;
         dirPath: string;
-        modelId: string;
+        presetId: string;
         options?: {
           recursive?: boolean;
           concurrency?: number;
         };
       },
     ) => {
-      const { taskId, dirPath, modelId, options } = params;
+      const { taskId, dirPath, presetId, options } = params;
       const { recursive = false, concurrency = 4 } = options ?? {};
       const repo = getRepository();
 
@@ -121,10 +129,10 @@ export function setupImageDetectorIpc(): void {
       };
 
       try {
-        // 5) 执行批量检测
-        const results: DetectionResult[] = await processor.processDirectory(
+        // 5) 执行批量检测（使用预设模式）
+        const results: DetectionResult[] = await processor.processDirectoryWithPreset(
           dirPath,
-          modelId,
+          presetId,
           { recursive, onProgress },
         );
 
@@ -153,6 +161,7 @@ export function setupImageDetectorIpc(): void {
                 total: results.length,
                 qualified: results.filter((r) => r.isQualified).length,
                 unqualified: results.filter((r) => !r.isQualified).length,
+                preset: presetId,
               }),
               taskId,
             );

@@ -1,8 +1,8 @@
 <template>
   <div class="module-page">
     <div class="page-header">
-      <h2>🖼️ 图像检测</h2>
-      <p class="page-desc">批量检测图像质量，支持清晰度、尺寸、亮度检测</p>
+      <h2>🖼️ 档案图像质量检测</h2>
+      <p class="page-desc">依据 DA/T 31-2017 标准，检测格式、分辨率、色彩、模糊、歪斜、黑边</p>
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════════
@@ -38,33 +38,32 @@
           </el-checkbox>
         </el-form-item>
 
-        <!-- 模型选择 -->
-        <el-form-item label="检测模型">
-          <el-select
-            v-model="modelId"
-            placeholder="选择检测模型"
-            :disabled="running"
-            style="width: 240px"
-          >
-            <el-option label="清晰度检测" value="clarity">
-              <div class="model-option">
-                <span class="model-name">清晰度检测</span>
-                <span class="model-desc">分辨率 + 文件大小</span>
-              </div>
-            </el-option>
-            <el-option label="尺寸检测" value="size">
-              <div class="model-option">
-                <span class="model-name">尺寸检测</span>
-                <span class="model-desc">200x200 ~ 4096x4096</span>
-              </div>
-            </el-option>
-            <el-option label="亮度检测" value="brightness">
-              <div class="model-option">
-                <span class="model-name">亮度检测</span>
-                <span class="model-desc">过暗/过亮判断</span>
-              </div>
-            </el-option>
-          </el-select>
+        <!-- 检测模式 -->
+        <el-form-item label="检测模式">
+          <div class="preset-buttons">
+            <el-button
+              :type="presetId === 'archive' ? 'primary' : 'default'"
+              @click="presetId = 'archive'"
+              :disabled="running"
+            >
+              📦 保存级
+            </el-button>
+            <el-button
+              :type="presetId === 'access' ? 'primary' : 'default'"
+              @click="presetId = 'access'"
+              :disabled="running"
+            >
+              📖 利用级
+            </el-button>
+            <el-button
+              :type="presetId === 'quick' ? 'primary' : 'default'"
+              @click="presetId = 'quick'"
+              :disabled="running"
+            >
+              ⚡ 快速筛查
+            </el-button>
+          </div>
+          <p class="preset-desc">{{ presetDescription }}</p>
         </el-form-item>
 
         <!-- 并发数 -->
@@ -245,7 +244,7 @@ interface ProgressData {
 // ---------------------------------------------------------------------------
 
 const dirPath = ref('');
-const modelId = ref('clarity');
+const presetId = ref('archive');
 const recursive = ref(false);
 const concurrency = ref(4);
 const threshold = ref(50);
@@ -278,7 +277,16 @@ const results = ref<DetectionResult[]>([]);
 // Computed
 // ---------------------------------------------------------------------------
 
-const canStart = computed(() => dirPath.value.trim().length > 0 && modelId.value.length > 0);
+const canStart = computed(() => dirPath.value.trim().length > 0 && presetId.value.length > 0);
+
+// 预设模式描述
+const presetDescriptions: Record<string, string> = {
+  archive: '归档入库标准：TIFF格式 + ≥300DPI + 全项检测（格式/分辨率/色彩/模糊/歪斜/黑边）',
+  access: '查阅利用标准：JPEG/PDF格式 + ≥150DPI + 基础检测（格式/分辨率/色彩/模糊）',
+  quick: '快速验收：仅检查格式和分辨率（≥150DPI），支持常见图片格式',
+};
+
+const presetDescription = computed(() => presetDescriptions[presetId.value] || '');
 
 const qualifiedCount = computed(() =>
   results.value.filter((r) => r.isQualified && !r.error).length,
@@ -363,7 +371,7 @@ async function startDetection(): Promise<void> {
     // 1) 创建检测任务
     const createRes = await api.createImageDetectorTask({
       dirPath: dirPath.value,
-      modelId: modelId.value,
+      presetId: presetId.value,
       options: {
         recursive: recursive.value,
         concurrency: concurrency.value,
@@ -392,7 +400,7 @@ async function startDetection(): Promise<void> {
     const runRes = await api.runImageDetector({
       taskId: taskId.value,
       dirPath: dirPath.value,
-      modelId: modelId.value,
+      presetId: presetId.value,
       options: {
         recursive: recursive.value,
         concurrency: concurrency.value,
@@ -492,7 +500,7 @@ async function exportReport(): Promise<void> {
     // 构建 JSON 报告
     const report = {
       taskId: taskId.value,
-      modelId: modelId.value,
+      presetId: presetId.value,
       threshold: threshold.value,
       dirPath: dirPath.value,
       total: results.value.length,
@@ -560,17 +568,17 @@ onMounted(() => {
 // 演示模式：加载内置图片并生成真实缩略图
 // ---------------------------------------------------------------------------
 
-function loadDemoImages() {
+async function loadDemoImages() {
   dirPath.value = '📁 产品图片目录 (20张)';
   const demoResults = generateImageScreeningResults();
   comparisonData.value = COMPARISON_DATA['image-screening'] ?? [];
 
   // 为每张图生成真实的 Canvas 缩略图
-  results.value = demoResults.map((r) => {
+  const resultsPromises = demoResults.map(async (r) => {
     const w = (r.details.width as number) || 320;
     const h = (r.details.height as number) || 240;
     // 用 Canvas 生成缩略图 Blob URL
-    const thumbnailUrl = generateDemoImage(
+    const thumbnailUrl = await generateDemoImage(
       Math.min(w, 320),
       Math.min(h, 240),
     );
@@ -583,6 +591,8 @@ function loadDemoImages() {
       details: r.details,
     };
   });
+
+  results.value = await Promise.all(resultsPromises);
 
   const qualified = results.value.filter((r) => r.isQualified).length;
   ElNotification({

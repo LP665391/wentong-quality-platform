@@ -7,8 +7,11 @@ import type { ImageDetector, DetectionResult } from './detector.js';
  * 扫描目录中的图像文件并并发执行检测
  */
 export class BatchProcessor {
+  // 支持的文件扩展名（包含档案常用格式）
   private readonly supportedExtensions = new Set([
     '.jpg', '.jpeg', '.png', '.bmp', '.webp',
+    '.tiff', '.tif',  // 档案保存级格式
+    '.pdf',           // 档案利用级格式
   ]);
 
   constructor(
@@ -17,7 +20,7 @@ export class BatchProcessor {
   ) {}
 
   /**
-   * 扫描并处理目录中的所有图像文件
+   * 扫描并处理目录中的所有图像文件（单模型）
    */
   async processDirectory(
     dirPath: string,
@@ -65,6 +68,51 @@ export class BatchProcessor {
     );
 
     await Promise.all(workers);
+
+    return results;
+  }
+
+  /**
+   * 扫描并处理目录中的所有图像文件（预设模式）
+   * 对每个文件执行预设中的所有检测模型
+   */
+  async processDirectoryWithPreset(
+    dirPath: string,
+    presetId: string,
+    options?: {
+      recursive?: boolean;
+      onProgress?: (current: number, total: number, fileName: string) => void;
+    }
+  ): Promise<DetectionResult[]> {
+    const { recursive = false, onProgress } = options ?? {};
+
+    // 扫描文件
+    const files = this.scanFiles(dirPath, recursive);
+    const imageFiles = files.filter((f) =>
+      this.supportedExtensions.has(path.extname(f).toLowerCase())
+    );
+
+    if (imageFiles.length === 0) {
+      return [];
+    }
+
+    const results: DetectionResult[] = [];
+    let completed = 0;
+    const total = imageFiles.length;
+
+    // 串行处理（因为每个文件需要多个检测模型）
+    for (const filePath of imageFiles) {
+      const result = await this.detector.detectBatch(
+        [filePath],
+        presetId
+      );
+      // detectBatch 返回 BatchDetectionResult，取第一个结果
+      if (result.results.length > 0) {
+        results.push(result.results[0]);
+      }
+      completed++;
+      onProgress?.(completed, total, path.basename(filePath));
+    }
 
     return results;
   }
