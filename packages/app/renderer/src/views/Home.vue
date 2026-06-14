@@ -62,8 +62,8 @@
       </div>
     </section>
 
-    <!-- 拖拽上传区 -->
-    <section class="home-dropzone">
+    <!-- 拖拽上传区（已隐藏） -->
+    <section class="home-dropzone" v-if="false">
       <div
         class="dropzone-area"
         :class="{ 'dropzone-area--active': isDragging }"

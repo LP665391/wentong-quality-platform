@@ -4,8 +4,8 @@
   "private": true,
   "main": "./dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc && electron .",
+    "build": "tsc && cp src/preload.js dist/preload.js",
+    "dev": "npm run build && electron .",
     "start": "electron ."
   },
   "dependencies": {

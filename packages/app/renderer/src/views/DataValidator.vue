@@ -56,35 +56,35 @@
         <span class="step-badge">2</span>
         <span>配置规则</span>
       </div>
-      <el-form label-width="100px" label-position="left">
-        <el-form-item label="校验规则">
-          <el-select
-            v-model="preset"
-            placeholder="选择预设校验规则"
-            :disabled="validating"
-            style="width: 240px"
-          >
-            <el-option label="标准模式" value="standard">
-              <div class="preset-option">
-                <span class="preset-name">标准模式</span>
-                <span class="preset-desc">必填检查 + 格式验证 + 范围检查</span>
-              </div>
-            </el-option>
-            <el-option label="严格模式" value="strict">
-              <div class="preset-option">
-                <span class="preset-name">严格模式</span>
-                <span class="preset-desc">全部 error 级别，更严格的数值范围</span>
-              </div>
-            </el-option>
-            <el-option label="宽松模式" value="loose">
-              <div class="preset-option">
-                <span class="preset-name">宽松模式</span>
-                <span class="preset-desc">仅检查必填字段，警告级别</span>
-              </div>
-            </el-option>
-          </el-select>
-        </el-form-item>
-      </el-form>
+      <div class="preset-buttons">
+        <el-button
+          :type="preset === 'standard' ? 'primary' : 'default'"
+          :plain="preset !== 'standard'"
+          @click="preset = 'standard'"
+          :disabled="validating"
+        >
+          <span class="preset-btn-name">标准模式</span>
+          <span class="preset-btn-desc">必填 + 格式 + 范围</span>
+        </el-button>
+        <el-button
+          :type="preset === 'strict' ? 'primary' : 'default'"
+          :plain="preset !== 'strict'"
+          @click="preset = 'strict'"
+          :disabled="validating"
+        >
+          <span class="preset-btn-name">严格模式</span>
+          <span class="preset-btn-desc">全部 error 级别</span>
+        </el-button>
+        <el-button
+          :type="preset === 'loose' ? 'primary' : 'default'"
+          :plain="preset !== 'loose'"
+          @click="preset = 'loose'"
+          :disabled="validating"
+        >
+          <span class="preset-btn-name">宽松模式</span>
+          <span class="preset-btn-desc">仅必填字段</span>
+        </el-button>
+      </div>
     </div>
 
     <!-- ── 步骤三：执行校验 ── -->
@@ -731,6 +731,35 @@ function loadDemoData() {
   font-size: 14px;
   font-weight: 700;
   flex-shrink: 0;
+}
+
+/* ── 预设模式按钮 ─ */
+.preset-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.preset-buttons .el-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 12px 20px;
+  height: auto;
+  min-width: 160px;
+}
+
+.preset-btn-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.preset-btn-desc {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.4;
+  margin-top: 2px;
 }
 
 .result-badge {

@@ -16,6 +16,8 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'config:set',
   'dialog:openFile',
   'dialog:openDirectory',
+  'dialog:saveFile',
+  'file:write',
   'validator:create',
   'validator:run',
   'validator:cancel',
@@ -69,6 +71,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- 文件对话框 ---
   selectFile: (options) => ipcRenderer.invoke('dialog:openFile', options),
   selectDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
+  saveFile: (options) => ipcRenderer.invoke('dialog:saveFile', options),
+  writeFile: (params) => ipcRenderer.invoke('file:write', params),
 
   // --- 数据校验 ---
   // 对象参数形式（推荐）

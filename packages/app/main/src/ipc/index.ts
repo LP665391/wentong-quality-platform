@@ -131,6 +131,35 @@ export function setupIpcHandlers(): void {
     return result.canceled ? '' : result.filePaths[0] ?? '';
   });
 
+  /**
+   * 打开文件保存对话框
+   *
+   * @param _event  - IPC 事件对象
+   * @param options - 对话框选项
+   * @returns 选中的文件路径，取消则返回空字符串
+   */
+  ipcMain.handle('dialog:saveFile', async (_event, options?: Electron.SaveDialogOptions) => {
+    const win = getActiveWindow();
+    const result = await dialog.showSaveDialog(win, {
+      ...options,
+    });
+    return result.canceled ? '' : result.filePath ?? '';
+  });
+
+  /**
+   * 写入文件
+   *
+   * @param _event - IPC 事件对象
+   * @param params - { filePath: string, content: string }
+   * @returns 是否成功
+   */
+  ipcMain.handle('file:write', async (_event, params: { filePath: string; content: string }) => {
+    const { filePath, content } = params;
+    const fs = await import('node:fs');
+    fs.writeFileSync(filePath, content, 'utf-8');
+    return { success: true };
+  });
+
   // -----------------------------------------------------------------------
   // 任务操作
   // -----------------------------------------------------------------------

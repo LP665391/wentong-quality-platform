@@ -424,19 +424,46 @@ async function injectAction(): Promise<void> {
   }
 }
 
-function exportJson(): void {
+async function exportJson(): Promise<void> {
   if (!metadata.value) return;
 
-  const json = JSON.stringify(metadata.value, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${metadata.value.fileName}.metadata.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-
-  ElMessage.success('JSON 文件已下载');
+  const api = (window as any).electronAPI;
+  
+  // Electron 环境：使用保存对话框
+  if (api?.saveFile && api?.writeFile) {
+    try {
+      const json = JSON.stringify(metadata.value, null, 2);
+      const filePath = await api.saveFile({
+        defaultPath: `${metadata.value.fileName || 'metadata'}.metadata.json`,
+        filters: [
+          { name: 'JSON 文件', extensions: ['json'] },
+          { name: '所有文件', extensions: ['*'] },
+        ],
+      });
+      
+      if (!filePath) return; // 用户取消
+      
+      await api.writeFile({ filePath, content: json });
+      ElMessage.success('JSON 文件已保存');
+    } catch (err: any) {
+      ElMessage.error(`保存失败：${err.message ?? err}`);
+    }
+  } else {
+    // 浏览器环境：使用 Blob 下载
+    try {
+      const json = JSON.stringify(metadata.value, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${metadata.value.fileName || 'metadata'}.metadata.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      ElMessage.success('JSON 文件已下载');
+    } catch (err: any) {
+      ElMessage.error(`下载失败：${err.message ?? err}`);
+    }
+  }
 }
 
 async function copyToClipboard(): Promise<void> {

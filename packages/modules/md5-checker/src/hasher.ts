@@ -9,7 +9,6 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { fileURLToPath } from 'node:url';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -107,13 +106,7 @@ export type BatchProgressCallback = (completed: number, total: number) => void;
  * 兼容 CommonJS 和 ESM 两种模块系统。
  */
 function getWorkerPath(): string {
-  // CommonJS 环境使用 __dirname
-  if (typeof __dirname !== 'undefined') {
-    return path.join(__dirname, 'hash-worker.js');
-  }
-  // ESM 环境使用 import.meta.url
-  const currentDir = path.dirname(fileURLToPath(import.meta.url));
-  return path.join(currentDir, 'hash-worker.js');
+  return path.join(__dirname, 'hash-worker.js');
 }
 
 /**
