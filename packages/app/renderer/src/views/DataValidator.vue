@@ -196,7 +196,7 @@
 
       <!-- 错误明细表格 -->
       <el-table
-        :data="report.errors"
+        :data="paginatedErrors"
         stripe
         border
         max-height="480"
@@ -240,6 +240,19 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页控件 -->
+      <div v-if="report && report.errors.length > 10" class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="report.errors.length"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
     </div>
 
     <!-- 报告预览弹窗（演示模式） -->
@@ -361,6 +374,10 @@ const report = ref<ValidationReport | null>(null);
 const showReportPreview = ref(false);
 const appStore = useAppStore();
 
+// 分页相关
+const currentPage = ref(1);
+const pageSize = ref(10);
+
 // 错误类型中文标签映射
 const errorTypeLabels: Record<string, string> = {
   not_a_number: '非数字',
@@ -382,6 +399,14 @@ function getErrorTypeLabel(type: string): string {
 // ---------------------------------------------------------------------------
 
 const canStart = computed(() => filePath.value.trim().length > 0 && preset.value.length > 0);
+
+// 分页后的错误数据
+const paginatedErrors = computed(() => {
+  if (!report.value) return [];
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+  return report.value.errors.slice(start, end);
+});
 
 const progressTagType = computed(() => {
   switch (progressStatus.value) {
@@ -416,6 +441,16 @@ const progressStatusText = computed(() => {
 
 function getApi() {
   return (window as any).electronAPI;
+}
+
+// 分页事件处理
+function handleSizeChange(val: number) {
+  pageSize.value = val;
+  currentPage.value = 1; // 切换每页条数时重置到第一页
+}
+
+function handleCurrentChange(val: number) {
+  currentPage.value = val;
 }
 
 function formatDuration(ms: number): string {
@@ -1051,5 +1086,13 @@ function loadDemoData() {
   font-size: 13px;
   padding-top: 12px;
   border-top: 1px solid #ebeef5;
+}
+
+/* ── 分页控件 ── */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+  padding: 12px 0;
 }
 </style>
