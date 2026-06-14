@@ -44,6 +44,9 @@ export interface RuleResult {
   warningCount: number;
 }
 
+/** 校验报告等级 */
+export type ReportGrade = 'pass' | 'warning' | 'fail';
+
 /** 校验报告 */
 export interface ValidationReport {
   /** 任务 ID */
@@ -66,6 +69,10 @@ export interface ValidationReport {
   duration: number;
   /** 完成时间（ISO 字符串） */
   completedAt: string;
+  /** 报告等级：pass=可入库, warning=需整改, fail=需返工 */
+  grade: ReportGrade;
+  /** 等级说明 */
+  gradeLabel: string;
 }
 
 /** 进度回调 */
@@ -81,9 +88,29 @@ interface PresetRuleEntry {
 }
 
 /**
- * 标准预设：必填 + 格式 + 范围
- * 注意：format 规则的 formatType 默认为空，需用户根据实际数据补充（如 'date', 'number', 'email' 等）
- * 注意：range 规则默认禁用，因为需要对数值字段单独配置，避免对字符串字段产生误报
+ * 宽松模式 - "收上来就行"
+ * 适用场景：档案移交初期，先确保数据不缺失
+ * 检查项：必填字段（档号、题名、责任者、日期、保管期限）
+ * 严重程度：全部为警告
+ */
+function buildLoosePreset(fields: string[]): PresetRuleEntry[] {
+  return [
+    {
+      type: 'required',
+      config: { enabled: true, severity: 'warning' as const, fields },
+    },
+  ];
+}
+
+/**
+ * 标准模式 - "符合国标"
+ * 适用场景：按照 DA/T 18-2022 等档案行业标准进行规范性检查
+ * 检查项：
+ * - 必填字段（缺失为错误）
+ * - 日期格式（YYYYMMDD 或 YYYY-MM-DD）
+ * - 保管期限（永久/30年/10年）
+ * - 密级（公开/内部/秘密/机密）
+ * - 页数（正整数）
  */
 function buildStandardPreset(fields: string[]): PresetRuleEntry[] {
   return [
@@ -93,18 +120,36 @@ function buildStandardPreset(fields: string[]): PresetRuleEntry[] {
     },
     {
       type: 'format',
-      config: { enabled: true, severity: 'error' as const, fields, formatType: undefined },
+      config: {
+        enabled: true,
+        severity: 'error' as const,
+        fields,
+        formatType: 'archive_standard' as const, // 档案标准格式
+      },
     },
     {
       type: 'range',
-      config: { enabled: false, severity: 'warning' as const, fields, rangeType: 'number', min: 0 },
+      config: {
+        enabled: true,
+        severity: 'warning' as const,
+        fields,
+        rangeType: 'archive_enum' as const, // 档案枚举校验
+      },
     },
   ];
 }
 
 /**
- * 严格预设：必填 + 格式 + 范围（全部 error，更严格的范围）
- * 注意：format 规则的 formatType 默认为空，需用户根据实际数据补充
+ * 严格模式 - "进馆级审查"
+ * 适用场景：档案正式进馆前的终审，要求零缺陷
+ * 检查项：
+ * - 标准模式全部
+ * - 档号格式（全宗号-目录号-案卷号-件号）
+ * - 责任者格式（不能包含数字/特殊字符）
+ * - 日期合理性（不能晚于当前日期，不能早于1949年）
+ * - 档号唯一性
+ * - 页数范围（1-9999）
+ * 严重程度：全部为错误
  */
 function buildStrictPreset(fields: string[]): PresetRuleEntry[] {
   return [
@@ -114,7 +159,12 @@ function buildStrictPreset(fields: string[]): PresetRuleEntry[] {
     },
     {
       type: 'format',
-      config: { enabled: true, severity: 'error' as const, fields, formatType: undefined },
+      config: {
+        enabled: true,
+        severity: 'error' as const,
+        fields,
+        formatType: 'archive_strict' as const, // 档案严格格式
+      },
     },
     {
       type: 'range',
@@ -122,22 +172,8 @@ function buildStrictPreset(fields: string[]): PresetRuleEntry[] {
         enabled: true,
         severity: 'error' as const,
         fields,
-        rangeType: 'number',
-        min: 0,
-        max: 99999,
+        rangeType: 'archive_strict' as const, // 档案严格校验
       },
-    },
-  ];
-}
-
-/**
- * 宽松预设：仅必填（warning），不含格式/范围
- */
-function buildLoosePreset(fields: string[]): PresetRuleEntry[] {
-  return [
-    {
-      type: 'required',
-      config: { enabled: true, severity: 'warning' as const, fields },
     },
   ];
 }
@@ -345,6 +381,10 @@ export class ValidationEngine {
     emitProgress(95, 'reporting', `统计完成：${totalErrors} 错误, ${totalWarnings} 警告`);
 
     const duration = Date.now() - startTime;
+    
+    // 计算报告等级
+    const { grade, gradeLabel } = this.calculateGrade(totalErrors, totalWarnings);
+    
     const report: ValidationReport = {
       taskId,
       fileName,
@@ -356,10 +396,28 @@ export class ValidationEngine {
       errors: allErrors,
       duration,
       completedAt: new Date().toISOString(),
+      grade,
+      gradeLabel,
     };
 
     emitProgress(100, 'done', `校验完成，耗时 ${duration}ms`);
 
     return report;
+  }
+
+  /**
+   * 计算报告等级
+   * - pass: 0 错误，0 警告 → 可入库
+   * - warning: 0 错误，有警告 → 需整改
+   * - fail: 有错误 → 需返工
+   */
+  private calculateGrade(errors: number, warnings: number): { grade: ReportGrade; gradeLabel: string } {
+    if (errors > 0) {
+      return { grade: 'fail', gradeLabel: '需返工' };
+    }
+    if (warnings > 0) {
+      return { grade: 'warning', gradeLabel: '需整改' };
+    }
+    return { grade: 'pass', gradeLabel: '可入库' };
   }
 }

@@ -52,13 +52,22 @@
       </div>
       <div class="preset-buttons">
         <el-button
+          :type="preset === 'loose' ? 'primary' : 'default'"
+          :plain="preset !== 'loose'"
+          @click="preset = 'loose'"
+          :disabled="validating"
+        >
+          <span class="preset-btn-name">宽松模式</span>
+          <span class="preset-btn-desc">收上来就行</span>
+        </el-button>
+        <el-button
           :type="preset === 'standard' ? 'primary' : 'default'"
           :plain="preset !== 'standard'"
           @click="preset = 'standard'"
           :disabled="validating"
         >
           <span class="preset-btn-name">标准模式</span>
-          <span class="preset-btn-desc">必填 + 格式 + 范围</span>
+          <span class="preset-btn-desc">符合国标</span>
         </el-button>
         <el-button
           :type="preset === 'strict' ? 'primary' : 'default'"
@@ -67,16 +76,15 @@
           :disabled="validating"
         >
           <span class="preset-btn-name">严格模式</span>
-          <span class="preset-btn-desc">全部 error 级别</span>
+          <span class="preset-btn-desc">进馆审查</span>
         </el-button>
-        <el-button
-          :type="preset === 'loose' ? 'primary' : 'default'"
-          :plain="preset !== 'loose'"
-          @click="preset = 'loose'"
-          :disabled="validating"
-        >
-          <span class="preset-btn-name">宽松模式</span>
-          <span class="preset-btn-desc">仅必填字段</span>
+      </div>
+      <!-- 智能推荐提示 -->
+      <div v-if="recommendedPreset && recommendedPreset !== preset" class="recommend-tip">
+        <el-icon><InfoFilled /></el-icon>
+        <span>根据文件特征，推荐使用 <strong>{{ getPresetLabel(recommendedPreset) }}</strong></span>
+        <el-button type="primary" link size="small" @click="preset = recommendedPreset">
+          切换
         </el-button>
       </div>
     </div>
@@ -133,6 +141,15 @@
       <div class="step-title">
         <span class="step-badge result-badge">✓</span>
         <span>校验结果</span>
+        <!-- 报告等级标签 -->
+        <el-tag
+          :type="gradeTagType"
+          size="large"
+          effect="dark"
+          class="grade-tag"
+        >
+          {{ report.gradeLabel }}
+        </el-tag>
       </div>
 
       <!-- 统计卡片 -->
@@ -309,7 +326,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
-import { Download, Monitor, User } from '@element-plus/icons-vue';
+import { Download, Monitor, User, InfoFilled } from '@element-plus/icons-vue';
 import { useAppStore } from '@/stores/app';
 import { type ComparisonData } from '@/utils/demo-scenarios';
 
@@ -380,6 +397,7 @@ const pageSize = ref(10);
 
 // 错误类型中文标签映射
 const errorTypeLabels: Record<string, string> = {
+  // 通用错误
   not_a_number: '非数字',
   number_out_of_range: '数值超范围',
   enum_out_of_range: '枚举值超范围',
@@ -388,6 +406,13 @@ const errorTypeLabels: Record<string, string> = {
   required: '必填缺失',
   unknown_format: '未知格式',
   format_mismatch: '格式不匹配',
+  // 档案业务错误
+  date_future: '日期超范围',
+  date_too_old: '日期过早',
+  archive_code_invalid: '档号格式错误',
+  responsible_person_invalid: '责任者格式错误',
+  pages_out_of_range: '页数超范围',
+  duplicate_archive_code: '档号重复',
 };
 
 function getErrorTypeLabel(type: string): string {
@@ -399,6 +424,39 @@ function getErrorTypeLabel(type: string): string {
 // ---------------------------------------------------------------------------
 
 const canStart = computed(() => filePath.value.trim().length > 0 && preset.value.length > 0);
+
+// 智能推荐模式
+const recommendedPreset = computed(() => {
+  const fileName = filePath.value.toLowerCase();
+  
+  // 文件名包含"进馆"或"终审"关键词 → 严格模式
+  if (fileName.includes('进馆') || fileName.includes('终审') || fileName.includes('final')) {
+    return 'strict';
+  }
+  
+  // 文件名包含"移交"或"初步"关键词 → 宽松模式
+  if (fileName.includes('移交') || fileName.includes('初步') || fileName.includes('draft')) {
+    return 'loose';
+  }
+  
+  // 包含档号字段的文件 → 标准模式
+  if (fileName.includes('档号') || fileName.includes('档案')) {
+    return 'standard';
+  }
+  
+  // 默认推荐标准模式
+  return 'standard';
+});
+
+// 获取模式标签
+function getPresetLabel(preset: string): string {
+  const labels: Record<string, string> = {
+    loose: '宽松模式',
+    standard: '标准模式',
+    strict: '严格模式',
+  };
+  return labels[preset] ?? preset;
+}
 
 // 分页后的错误数据
 const paginatedErrors = computed(() => {
@@ -433,6 +491,21 @@ const progressStatusText = computed(() => {
     error: '错误',
   };
   return map[progressStatus.value] ?? progressStatus.value;
+});
+
+// 报告等级标签类型
+const gradeTagType = computed(() => {
+  if (!report.value) return 'info';
+  switch (report.value.grade) {
+    case 'pass':
+      return 'success';
+    case 'warning':
+      return 'warning';
+    case 'fail':
+      return 'danger';
+    default:
+      return 'info';
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -718,6 +791,12 @@ function loadDemoData() {
   margin-bottom: 16px;
 }
 
+.grade-tag {
+  margin-left: auto;
+  font-size: 14px;
+  padding: 6px 16px;
+}
+
 .step-badge {
   display: inline-flex;
   align-items: center;
@@ -759,6 +838,28 @@ function loadDemoData() {
   color: #909399;
   line-height: 1.4;
   margin-top: 2px;
+}
+
+.recommend-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: #ecf5ff;
+  border: 1px solid #b3d8ff;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #409eff;
+}
+
+.recommend-tip .el-icon {
+  font-size: 16px;
+}
+
+.recommend-tip strong {
+  color: #409eff;
+  font-weight: 600;
 }
 
 .result-badge {
