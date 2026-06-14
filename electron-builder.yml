@@ -5,9 +5,10 @@ copyright: Copyright © 2026 WenTong
 directories:
   output: release
   buildResources: resources
+  app: packages/app/main
 
 files:
-  - packages/**/dist/**/*
+  - dist/**/*
   - node_modules/**/*
   - "!node_modules/**/*.{md,ts,map,flow}"
   - "!node_modules/.cache/**"
@@ -29,6 +30,13 @@ asar: true
 asarUnpack:
   - "**/*.node"
   - "**/onnxruntime-node/**"
+
+extraResources:
+  - from: ../../modules
+    to: modules
+    filter:
+      - "**/dist/**"
+      - "**/package.json"
 
 mac:
   target:

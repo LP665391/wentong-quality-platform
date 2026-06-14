@@ -1291,7 +1291,7 @@ async function exportExcel(): Promise<void> {
 
     rows.forEach((row, index) => {
       sheetData.push([
-        index + 1,
+        String(index + 1),
         row.fileName || '',
         row.archiveCode || '',
         row.fondsNumber || '',
