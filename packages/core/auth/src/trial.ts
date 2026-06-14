@@ -16,7 +16,7 @@ import os from 'node:os';
 // ---------------------------------------------------------------------------
 
 /** 试用时长（天数） */
-const TRIAL_DURATION_DAYS = 30;
+const TRIAL_DURATION_DAYS = 7;
 
 /** 试用信息存储路径 */
 function getTrialFilePath(): string {

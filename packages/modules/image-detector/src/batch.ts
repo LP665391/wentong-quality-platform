@@ -7,11 +7,10 @@ import type { ImageDetector, DetectionResult } from './detector.js';
  * 扫描目录中的图像文件并并发执行检测
  */
 export class BatchProcessor {
-  // 支持的文件扩展名（包含档案常用格式）
+  // 支持的文件扩展名（仅图片格式）
   private readonly supportedExtensions = new Set([
     '.jpg', '.jpeg', '.png', '.bmp', '.webp',
-    '.tiff', '.tif',  // 档案保存级格式
-    '.pdf',           // 档案利用级格式
+    '.tiff', '.tif',
   ]);
 
   constructor(

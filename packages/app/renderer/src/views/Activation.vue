@@ -60,7 +60,7 @@
               <span>免费试用</span>
             </div>
           </template>
-          <p>开始 30 天全功能免费试用，无需任何授权码。到期后可购买正式授权。</p>
+          <p>开始 7 天全功能免费试用，无需任何授权码。到期后可购买正式授权。</p>
         </el-card>
       </div>
 
@@ -182,7 +182,7 @@
           </template>
           <div class="trial-info">
             <el-icon :size="48" color="#67c23a"><CircleCheckFilled /></el-icon>
-            <h3>30 天全功能免费试用</h3>
+            <h3>7 天全功能免费试用</h3>
             <ul>
               <li>所有功能均可使用</li>
               <li>无使用次数限制</li>
@@ -197,7 +197,7 @@
               :loading="startingTrial"
               @click="handleStartTrial"
             >
-              开始 30 天免费试用
+              开始 7 天免费试用
             </el-button>
             <el-button @click="goToStep(0)">返回</el-button>
           </div>
@@ -320,8 +320,8 @@ const machineId = ref('');
 const licenseInfo = ref<any>(null);
 const isAlreadyActivated = ref(false);
 const selectedFile = ref<File | null>(null);
-const trialRemainingDays = ref(30);
-const trialTotalDays = 30;
+const trialRemainingDays = ref(7);
+const trialTotalDays = 7;
 let trialTimer: ReturnType<typeof setInterval> | null = null;
 
 const onlineForm = ref({

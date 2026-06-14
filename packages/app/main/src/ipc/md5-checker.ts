@@ -8,9 +8,11 @@
  */
 
 import { ipcMain } from 'electron';
-import { hashFile, hashDirectory, verifyHash } from '@wentong/md5-checker';
-import type { HashAlgorithm, HashResult } from '@wentong/md5-checker';
+import { hashFile, hashDirectory, verifyHash, exportManifest, compareManifest, generateArchiveReport } from '@wentong/md5-checker';
+import type { HashAlgorithm, HashResult, ManifestCompareResult, ArchiveReportOptions } from '@wentong/md5-checker';
 import { getRepository } from '@wentong/database';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 // ---------------------------------------------------------------------------
 // 导出注册函数
@@ -152,6 +154,123 @@ export function setupMd5CheckerIpc(): void {
           actualHash,
           expectedHash,
         };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { success: false, error: message };
+      }
+    },
+  );
+
+  // -----------------------------------------------------------------------
+  // md5:count-files — 统计目录中匹配文件数量
+  // -----------------------------------------------------------------------
+
+  ipcMain.handle(
+    'md5:count-files',
+    async (
+      _event,
+      params: {
+        dirPath: string;
+        fileExtensions?: string[];
+      },
+    ) => {
+      const { dirPath, fileExtensions } = params;
+      try {
+        const fs = require('node:fs');
+        const path = require('node:path');
+        const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+        let count = 0;
+        for (const entry of entries) {
+          if (!entry.isFile()) continue;
+          if (fileExtensions && fileExtensions.length > 0) {
+            const ext = path.extname(entry.name).toLowerCase();
+            if (!fileExtensions.includes(ext)) continue;
+          }
+          count++;
+        }
+        return { success: true, count };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { success: false, error: message, count: 0 };
+      }
+    },
+  );
+
+  // -----------------------------------------------------------------------
+  // md5:export-manifest — 生成标准 .md5 清单文件
+  // -----------------------------------------------------------------------
+
+  ipcMain.handle(
+    'md5:export-manifest',
+    async (
+      _event,
+      params: {
+        results: HashResult[];
+        outputPath: string;
+      },
+    ) => {
+      const { results, outputPath } = params;
+      try {
+        const outDir = path.dirname(outputPath);
+        if (!fs.existsSync(outDir)) {
+          fs.mkdirSync(outDir, { recursive: true });
+        }
+        exportManifest(results, outputPath);
+        return { success: true, outputPath };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { success: false, error: message };
+      }
+    },
+  );
+
+  // -----------------------------------------------------------------------
+  // md5:compare-manifest — 清单比对
+  // -----------------------------------------------------------------------
+
+  ipcMain.handle(
+    'md5:compare-manifest',
+    async (
+      _event,
+      params: {
+        manifestPath: string;
+        dirPath: string;
+        algorithm?: HashAlgorithm;
+      },
+    ) => {
+      const { manifestPath, dirPath, algorithm } = params;
+      try {
+        const result: ManifestCompareResult = await compareManifest(manifestPath, dirPath, algorithm);
+        return { success: true, result };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { success: false, error: message };
+      }
+    },
+  );
+
+  // -----------------------------------------------------------------------
+  // md5:generate-report — 生成归档报告
+  // -----------------------------------------------------------------------
+
+  ipcMain.handle(
+    'md5:generate-report',
+    async (
+      _event,
+      params: {
+        results: HashResult[];
+        outputPath: string;
+        options: ArchiveReportOptions;
+      },
+    ) => {
+      const { results, outputPath, options } = params;
+      try {
+        const outDir = path.dirname(outputPath);
+        if (!fs.existsSync(outDir)) {
+          fs.mkdirSync(outDir, { recursive: true });
+        }
+        await generateArchiveReport(results, outputPath, options);
+        return { success: true, outputPath };
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         return { success: false, error: message };

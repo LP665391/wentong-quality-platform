@@ -126,33 +126,34 @@ export class LicenseManager {
    * @returns 激活后的许可证信息
    * @throws 如果授权码格式无效
    */
-  async activateOnline(licenseKey: string): Promise<LicenseInfo> {
+  async activateOnline(licenseKey: string, serverUrl?: string): Promise<LicenseInfo> {
     // 验证授权码格式
     const keyPattern = /^WT-[A-Z0-9]+-[A-Z0-9]+$/;
     if (!keyPattern.test(licenseKey)) {
       throw new Error('无效的授权码格式，请检查输入。');
     }
 
-    // 模拟远程验证（生产环境替换为 HTTP 请求）
-    await this.simulateRemoteValidation(licenseKey);
-
     // 获取当前机器指纹
     const machineId = generateMachineId();
 
-    // 从授权码中提取信息（演示用）
-    // 实际生产环境中，远程 API 会返回客户信息和许可证类型
-    const customer: CustomerInfo = {
-      customerName: '联网激活用户',
-      company: '',
-      type: 'permanent',
-    };
+    // 向授权服务器发起激活请求
+    const url = serverUrl || process.env.WENTONG_AUTH_SERVER || 'http://8.153.164.61';
+    const response = await fetch(`${url}/api/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ licenseKey, machineId }),
+    });
 
-    const { content, signature } = generateLicenseContent(customer, machineId);
+    const data = await response.json();
 
-    // 保存许可证文件（使用 writeLicenseFile 内部自带的目录创建逻辑）
-    this.writeLicenseFile({ content, signature });
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || '联网激活失败，请检查授权码和网络连接。');
+    }
 
-    return this.toLicenseInfo(content);
+    // 保存服务器返回的许可证
+    this.writeLicenseFile({ content: data.content, signature: data.signature });
+
+    return this.toLicenseInfo(data.content);
   }
 
   /**

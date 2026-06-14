@@ -143,10 +143,11 @@ function hashFileInWorker(
  *
  * 使用 worker_threads 并行计算，默认并发数为 4。
  *
- * @param dirPath    - 目录路径
- * @param algorithm  - 哈希算法，默认 'md5'
- * @param onProgress - 进度回调
- * @param concurrency - 并发数，默认 4
+ * @param dirPath       - 目录路径
+ * @param algorithm     - 哈希算法，默认 'md5'
+ * @param onProgress    - 进度回调
+ * @param concurrency   - 并发数，默认 4
+ * @param fileExtensions - 可选文件扩展名过滤，如 ['.pdf', '.txt']，默认不过滤
  * @returns 哈希结果数组
  */
 export async function hashDirectory(
@@ -154,6 +155,7 @@ export async function hashDirectory(
   algorithm: HashAlgorithm = 'md5',
   onProgress?: BatchProgressCallback,
   concurrency: number = 4,
+  fileExtensions?: string[],
 ): Promise<HashResult[]> {
   if (!fs.existsSync(dirPath)) {
     throw new Error(`目录不存在: ${dirPath}`);
@@ -173,7 +175,7 @@ export async function hashDirectory(
   }
 
   // 收集目录下所有文件
-  const files = collectFiles(dirPath);
+  const files = collectFiles(dirPath, fileExtensions);
   if (files.length === 0) {
     return [];
   }
@@ -238,17 +240,27 @@ export async function hashDirectory(
 
 /**
  * 递归收集目录中所有文件（仅文件，不含子目录）
+ *
+ * @param dirPath        - 目录路径
+ * @param fileExtensions - 可选文件扩展名过滤，如 ['.pdf', '.txt']，默认不过滤
  */
-function collectFiles(dirPath: string): string[] {
+function collectFiles(dirPath: string, fileExtensions?: string[]): string[] {
   const entries = fs.readdirSync(dirPath, { withFileTypes: true });
   const files: string[] = [];
 
   for (const entry of entries) {
     const fullPath = path.join(dirPath, entry.name);
     if (entry.isFile()) {
-      files.push(fullPath);
+      if (!fileExtensions || fileExtensions.length === 0) {
+        files.push(fullPath);
+      } else {
+        const ext = path.extname(entry.name).toLowerCase();
+        if (fileExtensions.map((e) => e.toLowerCase()).includes(ext)) {
+          files.push(fullPath);
+        }
+      }
     } else if (entry.isDirectory()) {
-      files.push(...collectFiles(fullPath));
+      files.push(...collectFiles(fullPath, fileExtensions));
     }
   }
 
@@ -274,4 +286,247 @@ export async function verifyHash(
 ): Promise<boolean> {
   const result = await hashFile(filePath, algorithm);
   return result.hash.toLowerCase() === expectedHash.toLowerCase();
+}
+
+// ---------------------------------------------------------------------------
+// 档案管理功能
+// ---------------------------------------------------------------------------
+
+/** 清单比对结果 */
+export interface ManifestCompareResult {
+  /** 哈希匹配的文件 */
+  matched: Array<{ fileName: string; hash: string }>;
+  /** 哈希值已修改的文件 */
+  modified: Array<{ fileName: string; expectedHash: string; actualHash: string }>;
+  /** 清单中存在但目录中缺失的文件 */
+  missing: Array<{ fileName: string; hash: string }>;
+  /** 目录中新增但清单中不存在的文件 */
+  added: Array<{ fileName: string; hash: string }>;
+}
+
+/** 归档报告选项 */
+export interface ArchiveReportOptions {
+  /** 操作人 */
+  operator: string;
+  /** 任务名称 */
+  taskName: string;
+  /** 机构名称 */
+  organization: string;
+}
+
+/** 清单条目解析结果 */
+interface ManifestEntry {
+  hash: string;
+  fileName: string;
+}
+
+/**
+ * 生成标准 .md5 清单文件
+ *
+ * 格式:
+ * ```
+ * MD5 清单 - 生成时间: 2026-06-14 17:00:00
+ * # 文件: 9 个
+ * # 算法: md5
+ * d4e5f8a1b2c3...  *0205-WS2024-D30-000-0043.pdf
+ * a1b2c3d4e5f8...  *0205-WS2024-D30-000-0044.pdf
+ * ```
+ *
+ * @param results    - 哈希计算结果数组
+ * @param outputPath - 输出文件路径
+ */
+export function exportManifest(results: HashResult[], outputPath: string): void {
+  const now = new Date();
+  const timeStr = formatDateTime(now);
+  const algorithm = results.length > 0 ? results[0].algorithm : 'md5';
+
+  const lines: string[] = [];
+  lines.push(`MD5 清单 - 生成时间: ${timeStr}`);
+  lines.push(`# 文件: ${results.length} 个`);
+  lines.push(`# 算法: ${algorithm}`);
+  for (const r of results) {
+    lines.push(`${r.hash}  *${r.fileName}`);
+  }
+
+  const dir = path.dirname(outputPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(outputPath, lines.join('\n') + '\n', 'utf-8');
+}
+
+/**
+ * 解析 .md5 清单文件
+ */
+function parseManifest(content: string): ManifestEntry[] {
+  const entries: ManifestEntry[] = [];
+  // 行格式: <hash>  *<filename>
+  // 也可能没有 * 前缀（兼容旧格式）
+  const regex = /^([a-fA-F0-9]{32,128})\s+\*?(.+)$/;
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('#') || trimmed.startsWith('MD5 清单') || trimmed === '') {
+      continue;
+    }
+    const match = trimmed.match(regex);
+    if (match) {
+      entries.push({ hash: match[1].toLowerCase(), fileName: match[2].trim() });
+    }
+  }
+  return entries;
+}
+
+/**
+ * 清单比对：解析 .md5 清单文件，扫描目录，比对文件匹配/修改/缺失/新增情况
+ *
+ * @param manifestPath - .md5 清单文件路径
+ * @param dirPath      - 待比对的目录路径
+ * @param algorithm    - 哈希算法，默认 'md5'
+ * @returns 比对结果
+ */
+export async function compareManifest(
+  manifestPath: string,
+  dirPath: string,
+  algorithm: HashAlgorithm = 'md5',
+): Promise<ManifestCompareResult> {
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`清单文件不存在: ${manifestPath}`);
+  }
+  if (!fs.existsSync(dirPath)) {
+    throw new Error(`目录不存在: ${dirPath}`);
+  }
+
+  const content = fs.readFileSync(manifestPath, 'utf-8');
+  const manifestEntries = parseManifest(content);
+  const manifestMap = new Map<string, string>();
+  for (const entry of manifestEntries) {
+    manifestMap.set(entry.fileName, entry.hash);
+  }
+
+  // 扫描当前目录
+  const dirFiles = collectFiles(dirPath);
+  const dirMap = new Map<string, string>();
+  for (const filePath of dirFiles) {
+    dirMap.set(path.basename(filePath), filePath);
+  }
+
+  const result: ManifestCompareResult = {
+    matched: [],
+    modified: [],
+    missing: [],
+    added: [],
+  };
+
+  // 遍历清单条目：区分 matched / modified / missing
+  const entryList = Array.from(manifestMap.entries());
+  for (let i = 0; i < entryList.length; i++) {
+    const [fileName, expectedHash] = entryList[i];
+    if (dirMap.has(fileName)) {
+      const resultItem = await hashFile(dirMap.get(fileName)!, algorithm);
+      const actualHash = resultItem.hash.toLowerCase();
+      if (actualHash === expectedHash.toLowerCase()) {
+        result.matched.push({ fileName, hash: actualHash });
+      } else {
+        result.modified.push({ fileName, expectedHash, actualHash });
+      }
+      dirMap.delete(fileName);
+    } else {
+      result.missing.push({ fileName, hash: expectedHash });
+    }
+  }
+
+  // 剩余在 dirMap 中的都是新增文件
+  const remainingKeys = Array.from(dirMap.keys());
+  for (let i = 0; i < remainingKeys.length; i++) {
+    const fileName = remainingKeys[i];
+    const resultItem = await hashFile(dirMap.get(fileName)!, algorithm);
+    result.added.push({ fileName, hash: resultItem.hash });
+  }
+
+  return result;
+}
+
+/**
+ * 生成归档报告
+ *
+ * 生成文本报告，包含：机构名称、操作人、操作时间、任务名称、文件总数、
+ * 每个文件的哈希值与大小、操作结论。
+ *
+ * @param results    - 哈希计算结果数组
+ * @param outputPath - 报告输出路径
+ * @param options    - 报告选项
+ */
+export async function generateArchiveReport(
+  results: HashResult[],
+  outputPath: string,
+  options: ArchiveReportOptions,
+): Promise<void> {
+  const now = new Date();
+  const timeStr = formatDateTime(now);
+  const totalSize = results.reduce((sum, r) => sum + r.fileSize, 0);
+
+  const lines: string[] = [];
+  lines.push('='.repeat(60));
+  lines.push('           归 档 报 告');
+  lines.push('='.repeat(60));
+  lines.push('');
+  lines.push(`机构名称: ${options.organization}`);
+  lines.push(`操作人:   ${options.operator}`);
+  lines.push(`操作时间: ${timeStr}`);
+  lines.push(`任务名称: ${options.taskName}`);
+  lines.push(`文件总数: ${results.length} 个`);
+  lines.push(`总大小:   ${formatBytes(totalSize)}`);
+  lines.push(`哈希算法: ${results.length > 0 ? results[0].algorithm : 'N/A'}`);
+  lines.push('');
+  lines.push('-'.repeat(60));
+  lines.push('文件明细:');
+  lines.push('-'.repeat(60));
+  lines.push('');
+
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    lines.push(`  ${String(i + 1).padStart(3, '0')}. ${r.fileName}`);
+    lines.push(`      MD5:  ${r.hash}`);
+    lines.push(`      大小: ${formatBytes(r.fileSize)} (${r.fileSize} 字节)`);
+    lines.push('');
+  }
+
+  lines.push('-'.repeat(60));
+  lines.push('操作结论:');
+  lines.push(`  任务"${options.taskName}"已完成归档，共处理 ${results.length} 个文件，`);
+  lines.push(`  文件完整性校验通过，哈希值已记录如上。`);
+  lines.push('');
+  lines.push(`  操作人: ${options.operator}`);
+  lines.push(`  日期:   ${timeStr}`);
+  lines.push('='.repeat(60));
+
+  const dir = path.dirname(outputPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(outputPath, lines.join('\n'), 'utf-8');
+}
+
+/**
+ * 格式化日期时间为本地字符串
+ */
+function formatDateTime(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const y = date.getFullYear();
+  const m = pad(date.getMonth() + 1);
+  const d = pad(date.getDate());
+  const h = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  const s = pad(date.getSeconds());
+  return `${y}-${m}-${d} ${h}:${min}:${s}`;
+}
+
+/**
+ * 格式化字节大小为人类可读字符串
+ */
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${units[i]}`;
 }

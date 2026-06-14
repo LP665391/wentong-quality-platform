@@ -89,6 +89,7 @@ export function createMainWindow(): BrowserWindow {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true, // 启用 Chromium OS 级沙箱
+      webSecurity: false, // 允许 file:// 协议访问本地文件
     },
   });
 

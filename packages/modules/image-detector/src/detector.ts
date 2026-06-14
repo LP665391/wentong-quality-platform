@@ -49,60 +49,57 @@ export class ImageDetector {
   }
 
   /**
-   * 对指定图像执行检测
+   * 对指定图像执行检测（内部使用，不生成缩略图）
    */
-  async detect(filePath: string, modelId: string, presetParams?: Record<string, unknown>): Promise<DetectionResult> {
+  private async detectInternal(filePath: string, modelId: string, presetParams?: Record<string, unknown>): Promise<DetectionResult> {
     const fileName = filePath.split(/[/\\]/).pop() ?? filePath;
-
     const model = this.models.get(modelId);
     if (!model) {
       return {
-        fileName,
-        filePath,
-        isQualified: false,
-        score: 0,
-        modelUsed: modelId,
-        details: {},
+        fileName, filePath, isQualified: false, score: 0,
+        modelUsed: modelId, details: {},
         error: `未知的检测模型: ${modelId}`,
       };
     }
-
     try {
       switch (model.type) {
-        case 'archive_format':
-          return await this.detectFormat(filePath, fileName, model, presetParams);
-        case 'archive_dpi':
-          return await this.detectDpi(filePath, fileName, model, presetParams);
-        case 'archive_color':
-          return await this.detectColor(filePath, fileName, model, presetParams);
-        case 'archive_blur':
-          return await this.detectBlur(filePath, fileName, model, presetParams);
-        case 'archive_skew':
-          return await this.detectSkew(filePath, fileName, model, presetParams);
-        case 'archive_border':
-          return await this.detectBorder(filePath, fileName, model, presetParams);
-        default:
-          return {
-            fileName,
-            filePath,
-            isQualified: false,
-            score: 0,
-            modelUsed: modelId,
-            details: {},
-            error: `不支持的检测类型: ${model.type}`,
-          };
+        case 'archive_format':  return await this.detectFormat(filePath, fileName, model, presetParams);
+        case 'archive_dpi':     return await this.detectDpi(filePath, fileName, model, presetParams);
+        case 'archive_color':   return await this.detectColor(filePath, fileName, model, presetParams);
+        case 'archive_blur':    return await this.detectBlur(filePath, fileName, model, presetParams);
+        case 'archive_skew':    return await this.detectSkew(filePath, fileName, model, presetParams);
+        case 'archive_border':  return await this.detectBorder(filePath, fileName, model, presetParams);
+        default: return {
+          fileName, filePath, isQualified: false, score: 0,
+          modelUsed: modelId, details: {},
+          error: `不支持的检测类型: ${model.type}`,
+        };
       }
     } catch (err) {
       return {
-        fileName,
-        filePath,
-        isQualified: false,
-        score: 0,
-        modelUsed: modelId,
-        details: {},
+        fileName, filePath, isQualified: false, score: 0,
+        modelUsed: modelId, details: {},
         error: err instanceof Error ? err.message : String(err),
       };
     }
+  }
+
+  /**
+   * 对指定图像执行检测，同时生成缩略图
+   */
+  async detect(filePath: string, modelId: string, presetParams?: Record<string, unknown>): Promise<DetectionResult> {
+    const result = await this.detectInternal(filePath, modelId, presetParams);
+    // 生成缩略图
+    try {
+      const thumbnail = await sharp(filePath)
+        .resize(200, 200, { fit: 'inside' })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+      result.details.thumbnail = `data:image/jpeg;base64,${thumbnail.toString('base64')}`;
+    } catch {
+      // 缩略图生成失败不影响检测结果
+    }
+    return result;
   }
 
   /**
@@ -129,15 +126,27 @@ export class ImageDetector {
         onProgress(i + 1, total, fileName);
       }
 
-      // 对该文件执行预设中的所有检测
+      // 对该文件执行预设中的所有检测（不生成缩略图）
       const fileResults: DetectionResult[] = [];
       for (const modelId of preset.models) {
-        const result = await this.detect(filePath, modelId, preset.params);
+        const result = await this.detectInternal(filePath, modelId, preset.params);
         fileResults.push(result);
       }
 
-      // 合并多个检测结果为一个综合结果
+      // 合并多个检测结果
       const mergedResult = this.mergeResults(filePath, fileName, fileResults, presetId);
+
+      // 缩略图只生成一次
+      try {
+        const thumbnail = await sharp(filePath)
+          .resize(200, 200, { fit: 'inside' })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+        mergedResult.details.thumbnail = `data:image/jpeg;base64,${thumbnail.toString('base64')}`;
+      } catch {
+        // 缩略图生成失败不影响检测结果
+      }
+
       results.push(mergedResult);
     }
 
@@ -175,9 +184,11 @@ export class ImageDetector {
       if (r.error) errors.push(r.error);
     }
 
-    // 综合评分：取最低分
-    const minScore = Math.min(...results.map(r => r.score));
+    // 综合评分：取平均分
     const avgScore = results.reduce((sum, r) => sum + r.score, 0) / results.length;
+
+    // 把缩略图提升到顶层 details，前端直接读取
+    const thumbnail = results[0]?.details?.thumbnail;
 
     return {
       fileName,
@@ -187,7 +198,7 @@ export class ImageDetector {
       modelUsed: presetId,
       details: {
         ...allDetails,
-        minScore,
+        thumbnail,
         checkCount: results.length,
         passedCount: results.filter(r => r.isQualified).length,
         failedCount: results.filter(r => !r.isQualified).length,

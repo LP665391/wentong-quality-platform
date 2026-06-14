@@ -18,6 +18,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'dialog:openDirectory',
   'dialog:saveFile',
   'file:write',
+  'file:readBase64',
   'validator:create',
   'validator:run',
   'validator:cancel',
@@ -31,9 +32,21 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'pdf:encrypt',
   'pdf:decrypt',
   'pdf:watermark',
+  'pdf:quality-check',
+  'pdf:page-number',
+  'pdf:image-to-pdf',
+  'pdf:watermark-batch',
+  'pdf:page-number-batch',
+  'pdf:quality-check-batch',
+  'pdf:encrypt-batch',
+  'pdf:decrypt-batch',
   'md5:hash',
   'md5:hashDir',
   'md5:verify',
+  'md5:count-files',
+  'md5:export-manifest',
+  'md5:compare-manifest',
+  'md5:generate-report',
   'metadata:extract',
   'metadata:inject',
   'doc:parse',
@@ -52,6 +65,7 @@ const ALLOWED_ON_CHANNELS = new Set([
   'validator:progress',
   'image-detector:progress',
   'pdf:progress',
+  'pdf:batch-progress',
   'md5:progress',
   'doc:progress',
 ]);
@@ -126,6 +140,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   getImageResults: (taskId) => ipcRenderer.invoke('image-detector:getResults', { taskId }),
 
+  // --- 文件读取（用于图片预览） ---
+  readFileAsBase64: (filePath) => ipcRenderer.invoke('file:readBase64', { filePath }),
+
   // --- PDF 处理（兼容对象参数和位置参数） ---
   mergePdf: (filePathsOrParams, outputPath) => {
     if (typeof filePathsOrParams === 'object' && filePathsOrParams !== null && !Array.isArray(filePathsOrParams)) {
@@ -161,6 +178,54 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 别名
   addWatermark: (filePath, outputPath, options) => ipcRenderer.invoke('pdf:watermark', { filePath, outputPath, options }),
 
+  // PDF 质检
+  checkPdfQuality: (filePathOrParams) => {
+    if (typeof filePathOrParams === 'object' && filePathOrParams !== null) {
+      return ipcRenderer.invoke('pdf:quality-check', filePathOrParams);
+    }
+    return ipcRenderer.invoke('pdf:quality-check', { filePath: filePathOrParams });
+  },
+
+  // PDF 页码编排
+  addPageNumbers: (filePathOrParams, outputPath, options) => {
+    if (typeof filePathOrParams === 'object' && filePathOrParams !== null) {
+      return ipcRenderer.invoke('pdf:page-number', filePathOrParams);
+    }
+    return ipcRenderer.invoke('pdf:page-number', { filePath: filePathOrParams, outputPath, options });
+  },
+
+  // 图片转 PDF
+  imagesToPdf: (imagePathsOrParams, outputPath, options) => {
+    if (typeof imagePathsOrParams === 'object' && imagePathsOrParams !== null && !Array.isArray(imagePathsOrParams)) {
+      return ipcRenderer.invoke('pdf:image-to-pdf', imagePathsOrParams);
+    }
+    return ipcRenderer.invoke('pdf:image-to-pdf', { imagePaths: imagePathsOrParams, outputPath, options });
+  },
+
+  // --- 批量处理 ---
+
+  // 批量水印
+  batchWatermark: (params) => ipcRenderer.invoke('pdf:watermark-batch', params),
+
+  // 批量页码
+  batchPageNumber: (params) => ipcRenderer.invoke('pdf:page-number-batch', params),
+
+  // 批量质检
+  batchQualityCheck: (params) => ipcRenderer.invoke('pdf:quality-check-batch', params),
+
+  // 批量加密
+  batchEncrypt: (params) => ipcRenderer.invoke('pdf:encrypt-batch', params),
+
+  // 批量解密
+  batchDecrypt: (params) => ipcRenderer.invoke('pdf:decrypt-batch', params),
+
+  // 批量进度监听
+  onBatchProgress: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('pdf:batch-progress', handler);
+    return () => ipcRenderer.removeListener('pdf:batch-progress', handler);
+  },
+
   // PDF 进度
   onPdfProgress: (callback) => {
     const handler = (_event, data) => callback(data);
@@ -193,6 +258,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('md5:progress', handler);
     return () => ipcRenderer.removeListener('md5:progress', handler);
   },
+
+  // MD5 导出清单
+  exportMd5Manifest: (params) => ipcRenderer.invoke('md5:export-manifest', params),
+
+  // MD5 统计文件数
+  countMd5Files: (params) => ipcRenderer.invoke('md5:count-files', params),
+
+  // MD5 清单比对
+  compareMd5Manifest: (params) => ipcRenderer.invoke('md5:compare-manifest', params),
+
+  // MD5 生成归档报告
+  generateMd5Report: (params) => ipcRenderer.invoke('md5:generate-report', params),
 
   // --- 元数据（兼容对象参数和位置参数） ---
   extractMetadata: (filePathOrParams) => {

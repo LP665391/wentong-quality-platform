@@ -176,6 +176,20 @@ export function setupIpcHandlers(): void {
     return { success: true };
   });
 
+  /**
+   * 读取文件为 base64（用于图片预览）
+   *
+   * @param _event - IPC 事件对象
+   * @param params - { filePath: string }
+   * @returns base64 编码的字符串
+   */
+  ipcMain.handle('file:readBase64', async (_event, params: { filePath: string }) => {
+    const { filePath } = params;
+    const fs = await import('node:fs');
+    const buffer = fs.readFileSync(filePath);
+    return buffer.toString('base64');
+  });
+
   // -----------------------------------------------------------------------
   // 任务操作
   // -----------------------------------------------------------------------

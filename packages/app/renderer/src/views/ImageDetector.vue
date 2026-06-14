@@ -1,17 +1,23 @@
 <template>
   <div class="module-page">
-    <div class="page-header">
-      <h2>🖼️ 档案图像质量检测</h2>
-      <p class="page-desc">依据 DA/T 31-2017 标准，检测格式、分辨率、色彩、模糊、歪斜、黑边</p>
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <h2>🖼️ 档案图像质量检测</h2>
+        <p class="page-desc">依据 DA/T 31-2017 标准，检测格式、分辨率、色彩、模糊、歪斜、黑边</p>
+      </div>
+      <el-button size="small" @click="showGuide = true">📖 使用说明</el-button>
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════════
-         区域1：检测配置
-         ══════════════════════════════════════════════════════════════════ -->
-    <div class="wt-card">
-      <h3 class="section-title">检测配置</h3>
+         区域1：检测配置（步骤一）
+         ═════════════════════════════════════════════════════════════════ -->
+    <div class="wt-card step-card">
+      <div class="step-title">
+        <span class="step-badge">1</span>
+        <span>选择目录</span>
+      </div>
 
-      <el-form label-width="100px" label-position="left">
+      <el-form label-width="80px" label-position="left">
         <!-- 质检目录 -->
         <el-form-item label="质检目录">
           <div class="input-with-btn">
@@ -37,64 +43,62 @@
             包含子目录
           </el-checkbox>
         </el-form-item>
-
-        <!-- 检测模式 -->
-        <el-form-item label="检测模式">
-          <div class="preset-buttons">
-            <el-button
-              :type="presetId === 'archive' ? 'primary' : 'default'"
-              @click="presetId = 'archive'"
-              :disabled="running"
-            >
-              📦 保存级
-            </el-button>
-            <el-button
-              :type="presetId === 'access' ? 'primary' : 'default'"
-              @click="presetId = 'access'"
-              :disabled="running"
-            >
-              📖 利用级
-            </el-button>
-            <el-button
-              :type="presetId === 'quick' ? 'primary' : 'default'"
-              @click="presetId = 'quick'"
-              :disabled="running"
-            >
-              ⚡ 快速筛查
-            </el-button>
-          </div>
-          <p class="preset-desc">{{ presetDescription }}</p>
-        </el-form-item>
-
-        <!-- 并发数 -->
-        <el-form-item label="并发数">
-          <el-slider
-            v-model="concurrency"
-            :min="1"
-            :max="8"
-            :step="1"
-            :disabled="running"
-            style="width: 200px"
-            show-stops
-          />
-          <span class="slider-hint">{{ concurrency }} 个并发</span>
-        </el-form-item>
-
-        <!-- 阈值 -->
-        <el-form-item label="合格阈值">
-          <el-slider
-            v-model="threshold"
-            :min="0"
-            :max="100"
-            :disabled="running"
-            style="width: 200px"
-            show-stops
-          />
-          <span class="slider-hint">≥ {{ threshold }} 分</span>
-        </el-form-item>
       </el-form>
+    </div>
 
-      <!-- 操作按钮 -->
+    <!-- ══════════════════════════════════════════════════════════════════
+         区域2：检测模式（步骤二）
+         ═════════════════════════════════════════════════════════════════ -->
+    <div class="wt-card step-card">
+      <div class="step-title">
+        <span class="step-badge">2</span>
+        <span>检测模式</span>
+      </div>
+
+      <div class="preset-section">
+        <div class="preset-label">检测模式</div>
+        <div class="preset-buttons">
+          <el-button
+            :type="presetId === 'archive' ? 'primary' : 'default'"
+            :plain="presetId !== 'archive'"
+            @click="presetId = 'archive'"
+            :disabled="running"
+          >
+            <span class="preset-btn-name">📦 保存级</span>
+            <span class="preset-btn-desc">归档入库</span>
+          </el-button>
+          <el-button
+            :type="presetId === 'access' ? 'primary' : 'default'"
+            :plain="presetId !== 'access'"
+            @click="presetId = 'access'"
+            :disabled="running"
+          >
+            <span class="preset-btn-name">📖 利用级</span>
+            <span class="preset-btn-desc">查阅利用</span>
+          </el-button>
+          <el-button
+            :type="presetId === 'quick' ? 'primary' : 'default'"
+            :plain="presetId !== 'quick'"
+            @click="presetId = 'quick'"
+            :disabled="running"
+          >
+            <span class="preset-btn-name">⚡ 快速筛查</span>
+            <span class="preset-btn-desc">快速验收</span>
+          </el-button>
+        </div>
+        <div class="preset-desc">{{ presetDescription }}</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         区域3：执行检测（步骤三）
+         ══════════════════════════════════════════════════════════════════ -->
+    <div class="wt-card step-card">
+      <div class="step-title">
+        <span class="step-badge">3</span>
+        <span>执行检测</span>
+      </div>
+
       <div class="action-row">
         <el-button
           type="success"
@@ -103,7 +107,7 @@
           :loading="running"
           @click="startDetection"
         >
-          {{ running ? '检测中...' : '运行检测' }}
+          {{ running ? '检测中...' : '开始检测' }}
         </el-button>
         <el-button
           type="danger"
@@ -138,73 +142,127 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════════
-         区域2：统计面板
+         区域4：检测结果
          ══════════════════════════════════════════════════════════════════ -->
-    <div v-if="results.length > 0" class="stats-grid">
-      <div class="stat-item">
-        <span class="stat-number">{{ results.length }}</span>
-        <span class="stat-label">总数</span>
+    <div v-if="results.length > 0" class="wt-card result-card">
+      <div class="step-title">
+        <span class="step-badge result-badge">✓</span>
+        <span>检测结果</span>
       </div>
-      <div class="stat-item stat-success">
-        <span class="stat-number">{{ qualifiedCount }}</span>
-        <span class="stat-label">合格</span>
-      </div>
-      <div class="stat-item stat-error">
-        <span class="stat-number">{{ unqualifiedCount }}</span>
-        <span class="stat-label">不合格</span>
-      </div>
-      <div class="stat-item stat-info">
-        <span class="stat-number">{{ qualifiedRate }}%</span>
-        <span class="stat-label">合格率</span>
-      </div>
-    </div>
 
-    <!-- ══════════════════════════════════════════════════════════════════
-         区域3：缩略图网格
-         ══════════════════════════════════════════════════════════════════ -->
-    <div v-if="results.length > 0" class="thumbnail-grid">
-      <div
-        v-for="item in displayResults"
-        :key="item.filePath"
-        class="thumbnail-item"
-        :class="{ 'is-unqualified': !item.isQualified, 'is-error': !!item.error }"
-        @click="openImage(item.filePath)"
-      >
-        <div class="thumbnail-img">
-          <img
-            :src="getFileUrl(item.filePath)"
-            :alt="item.fileName"
-            @error="onImgError"
-            loading="lazy"
-          />
-          <span class="thumbnail-status">
-            {{ item.error ? '⚠️' : item.isQualified ? '✅' : '❌' }}
+      <!-- 统计卡片 -->
+      <el-row :gutter="16" class="stats-row">
+        <el-col :span="6">
+          <div class="stat-card">
+            <div class="stat-value">{{ results.length }}</div>
+            <div class="stat-label">总数</div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-card stat-success">
+            <div class="stat-value">{{ qualifiedCount }}</div>
+            <div class="stat-label">合格</div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-card stat-error">
+            <div class="stat-value">{{ unqualifiedCount }}</div>
+            <div class="stat-label">不合格</div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-card">
+            <div class="stat-value">{{ qualifiedRate }}%</div>
+            <div class="stat-label">合格率</div>
+          </div>
+        </el-col>
+      </el-row>
+
+      <!-- 导出按钮 -->
+      <div class="export-row">
+        <span class="export-label">操作：</span>
+        <el-button
+          type="primary"
+          :icon="Download"
+          size="small"
+          @click="exportReport"
+          :disabled="exporting"
+          :loading="exporting"
+        >
+          导出报告
+        </el-button>
+        <el-button
+          :icon="FolderOpened"
+          size="small"
+          @click="openDir"
+          :disabled="!dirPath"
+        >
+          打开目录
+        </el-button>
+        <el-button
+          :icon="Delete"
+          size="small"
+          @click="resetResults"
+        >
+          清除结果
+        </el-button>
+      </div>
+
+      <!-- 缩略图网格 -->
+      <div class="thumbnail-grid">
+        <div
+          v-for="item in displayResults"
+          :key="item.filePath"
+          class="thumbnail-item"
+          :class="{ 'is-unqualified': !item.isQualified, 'is-error': !!item.error }"
+          @click="openImage(item.filePath)"
+        >
+          <div class="thumbnail-img">
+            <img
+              :src="(item.details.thumbnail as string) || ''"
+              :alt="item.fileName"
+              @error="onImgError"
+              loading="lazy"
+            />
+            <span class="thumbnail-status">
+              {{ item.error ? '⚠️' : item.isQualified ? '✅' : '❌' }}
+            </span>
+          </div>
+          <span class="thumbnail-name" :title="item.fileName">{{ item.fileName }}</span>
+          <span class="thumbnail-score" :class="{ 'score-low': item.score < threshold }">
+            {{ item.score.toFixed(0) + '分' }}
+          </span>
+          <span v-if="item.error" class="thumbnail-error" :title="item.error">
+            {{ item.error }}
           </span>
         </div>
-        <span class="thumbnail-name" :title="item.fileName">{{ item.fileName }}</span>
-        <span class="thumbnail-score" :class="{ 'score-low': item.score < threshold }">
-          {{ item.error ? 'N/A' : item.score.toFixed(0) + '分' }}
-        </span>
       </div>
     </div>
+    <!-- 使用说明对话框 -->
+    <el-dialog v-model="showGuide" title="📖 使用说明 — 图像检测" width="650px">
+      <div style="line-height: 1.8; font-size: 14px; color: #303133; padding: 0 8px;">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1677ff;">一、功能概述</h3>
+        <p style="margin: 0 0 16px 0; color: #595959;">批量检测图片质量，自动识别模糊、过暗、过亮等不合格图片，依据 DA/T 31-2017 标准输出评分与检测报告。</p>
 
-    <!-- ══════════════════════════════════════════════════════════════════
-         底部操作栏
-         ══════════════════════════════════════════════════════════════════ -->
-    <div v-if="results.length > 0" class="footer-actions">
-      <el-button @click="exportReport" :disabled="exporting">
-        <el-icon><Download /></el-icon>
-        {{ exporting ? '导出中...' : '导出报告' }}
-      </el-button>
-      <el-button @click="openDir" :disabled="!dirPath">
-        <el-icon><FolderOpened /></el-icon>
-        打开目录
-      </el-button>
-      <el-button @click="resetResults">
-        <el-icon><Delete /></el-icon>
-        清除结果
-      </el-button>
-    </div>
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1677ff;">二、操作步骤</h3>
+        <ol style="margin: 0 0 16px 0; padding-left: 20px;">
+          <li style="margin-bottom: 6px;"><strong>步骤1：</strong>选择图片目录 — 点击"浏览"选择包含待检测图片的文件夹，可勾选"包含子目录"递归扫描。</li>
+          <li style="margin-bottom: 6px;"><strong>步骤2：</strong>选择检测模式 — 保存级（归档入库，全项检测）、利用级（查阅利用，基础检测）、快速筛查（仅格式和分辨率）。</li>
+          <li style="margin-bottom: 6px;"><strong>步骤3：</strong>开始检测 — 点击"开始检测"，系统依次对每张图像进行格式、分辨率、色彩、模糊度、歪斜、黑边等多维度检测。</li>
+          <li style="margin-bottom: 6px;"><strong>步骤4：</strong>查看检测结果 — 页面展示合格/不合格统计、合格率，缩略图网格展示每张图片的评分和检测结果。</li>
+          <li style="margin-bottom: 6px;"><strong>步骤5：</strong>导出报告 — 点击"导出报告"生成检测报告，方便归档和反馈。</li>
+        </ol>
+
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1677ff;">三、常见问题</h3>
+        <ul style="margin: 0 0 0 0; padding-left: 20px;">
+          <li style="margin-bottom: 4px;">支持格式：TIFF、JPEG、PNG、BMP、PDF 等常见图像格式</li>
+          <li style="margin-bottom: 4px;">支持批量检测，自动遍历目录下所有图像文件</li>
+          <li style="margin-bottom: 4px;">检测结果包含评分（0-100 分），低于阈值标记为不合格</li>
+          <li style="margin-bottom: 4px;">保存级模式严格依据 DA/T 31-2017 纸质档案数字化技术规范</li>
+          <li style="margin-bottom: 4px;">检测结果不理想时，可调整检测模式重新检测</li>
+        </ul>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -212,6 +270,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
 import { useAppStore } from '@/stores/app';
+import { useTaskStore } from '@/stores/task';
 import { generateImageScreeningResults, COMPARISON_DATA, type ComparisonData, type DemoImageResult } from '@/utils/demo-scenarios';
 import { generateDemoImage } from '@/utils/demo-data';
 import { Download, FolderOpened, Delete } from '@element-plus/icons-vue';
@@ -251,8 +310,10 @@ const threshold = ref(50);
 const running = ref(false);
 const exporting = ref(false);
 const showComparison = ref(false);
+const showGuide = ref(false);
 const comparisonData = ref<ComparisonData[]>([]);
 const appStore = useAppStore();
+const taskStore = useTaskStore();
 
 // 是否浏览器环境（非 Electron）
 const isBrowser = computed(() => !(window as any).electronAPI && !(window as any).api);
@@ -327,10 +388,38 @@ function getApi() {
 
 function getFileUrl(filePath: string): string {
   // Electron 中 file:// 协议加载本地图片
+  // macOS/Linux: file:///path/to/file
+  // Windows: file:///C:/path/to/file
   if (filePath.startsWith('/')) {
     return `file://${filePath}`;
   }
   return `file:///${filePath}`;
+}
+
+// Electron 环境下使用 IPC 获取图片的 base64 编码
+async function getFileUrlSafe(filePath: string): Promise<string> {
+  const api = getApi();
+  if (api?.readFileAsBase64) {
+    try {
+      const base64 = await api.readFileAsBase64(filePath);
+      const ext = filePath.split('.').pop()?.toLowerCase() || 'jpg';
+      const mimeTypes: Record<string, string> = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        bmp: 'image/bmp',
+        webp: 'image/webp',
+        tiff: 'image/tiff',
+        tif: 'image/tiff',
+      };
+      const mime = mimeTypes[ext] || 'image/jpeg';
+      return `data:${mime};base64,${base64}`;
+    } catch {
+      // 降级到 file:// 协议
+      return getFileUrl(filePath);
+    }
+  }
+  return getFileUrl(filePath);
 }
 
 // ---------------------------------------------------------------------------
@@ -411,8 +500,38 @@ async function startDetection(): Promise<void> {
     if (cleanupProgress) cleanupProgress();
 
     if (runRes.success) {
-      results.value = (runRes.results as DetectionResult[]) || [];
+      const rawResults = (runRes.results as DetectionResult[]) || [];
       progress.value.percent = 100;
+
+      // 在 Electron 环境中，将图片路径转换为 base64 URL 以便显示
+      if (api?.readFileAsBase64) {
+        results.value = await Promise.all(
+          rawResults.map(async (r) => {
+            try {
+              const base64 = await api.readFileAsBase64(r.filePath);
+              const ext = r.filePath.split('.').pop()?.toLowerCase() || 'jpg';
+              const mimeTypes: Record<string, string> = {
+                jpg: 'image/jpeg',
+                jpeg: 'image/jpeg',
+                png: 'image/png',
+                bmp: 'image/bmp',
+                webp: 'image/webp',
+                tiff: 'image/tiff',
+                tif: 'image/tiff',
+              };
+              const mime = mimeTypes[ext] || 'image/jpeg';
+              return {
+                ...r,
+                filePath: `data:${mime};base64,${base64}`,
+              };
+            } catch {
+              return r;
+            }
+          })
+        );
+      } else {
+        results.value = rawResults;
+      }
 
       ElNotification({
         title: '检测完成',
@@ -420,6 +539,7 @@ async function startDetection(): Promise<void> {
         type: unqualifiedCount.value > 0 ? 'warning' : 'success',
         duration: 5000,
       });
+      taskStore.addTask({ name: `图像检测 - ${results.value.length}张图片`, module: '图像检测', status: unqualifiedCount.value > 0 ? 'completed' : 'completed' });
     } else if (!runRes.cancelled) {
       ElNotification({
         title: '检测失败',
@@ -427,6 +547,7 @@ async function startDetection(): Promise<void> {
         type: 'error',
         duration: 8000,
       });
+      taskStore.addTask({ name: `图像检测 - ${dirPath.value}`, module: '图像检测', status: 'failed', error: runRes.error ?? '未知错误' });
     }
   } catch (err: any) {
     ElNotification({
@@ -435,6 +556,7 @@ async function startDetection(): Promise<void> {
       type: 'error',
       duration: 8000,
     });
+    taskStore.addTask({ name: `图像检测 - ${dirPath.value}`, module: '图像检测', status: 'failed', error: err.message ?? String(err) });
   } finally {
     running.value = false;
   }
@@ -531,8 +653,8 @@ async function exportReport(): Promise<void> {
       const jsonPath = `${outDir}/image-detection-report.json`;
       const csvPath = `${outDir}/image-detection-report.csv`;
 
-      await api.writeFile(jsonPath, JSON.stringify(report, null, 2));
-      await api.writeFile(csvPath, csvContent);
+      await api.writeFile({ filePath: jsonPath, content: JSON.stringify(report, null, 2) });
+      await api.writeFile({ filePath: csvPath, content: csvContent });
 
       ElNotification({
         title: '导出成功',
@@ -608,6 +730,7 @@ async function loadDemoImages() {
 .module-page {
   max-width: 1200px;
   margin: 0 auto;
+  padding-top: 20px;
   padding-bottom: 32px;
 }
 
@@ -635,7 +758,41 @@ async function loadDemoImages() {
   border-bottom: 1px solid #ebeef5;
 }
 
-/* ── 表单 ── */
+/* ─ 步骤卡片 ── */
+.step-card {
+  margin-bottom: 16px;
+}
+
+.step-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #409eff;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.step-badge.result-badge {
+  background: #67c23a;
+}
+
+/* ── 文件输入 ── */
 .input-with-btn {
   display: flex;
   gap: 8px;
@@ -646,27 +803,50 @@ async function loadDemoImages() {
   flex: 1;
 }
 
-.slider-hint {
-  margin-left: 12px;
-  font-size: 13px;
-  color: #909399;
+/* ── 预设模式 ── */
+.preset-section {
+  margin-bottom: 16px;
 }
 
-/* ── 模型选项 ── */
-.model-option {
+.preset-label {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.preset-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.preset-buttons .el-button {
   display: flex;
   flex-direction: column;
-  line-height: 1.4;
+  align-items: center;
+  padding: 12px 20px;
+  min-width: 140px;
 }
 
-.model-name {
+.preset-btn-name {
   font-weight: 600;
   font-size: 14px;
+  margin-bottom: 4px;
 }
 
-.model-desc {
+.preset-btn-desc {
   font-size: 12px;
   color: #909399;
+}
+
+.preset-desc {
+  font-size: 13px;
+  color: #909399;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  line-height: 1.5;
 }
 
 /* ── 操作按钮 ── */
@@ -702,15 +882,17 @@ async function loadDemoImages() {
   max-width: 300px;
 }
 
-/* ── 统计面板 ── */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin: 16px 0;
+/* ── 结果卡片 ─ */
+.result-card {
+  margin-top: 16px;
 }
 
-.stat-item {
+/* ── 统计卡片 ── */
+.stats-row {
+  margin-bottom: 20px;
+}
+
+.stat-card {
   background: #f5f7fa;
   border-radius: 8px;
   padding: 20px 16px;
@@ -718,36 +900,27 @@ async function loadDemoImages() {
   transition: transform 0.2s;
 }
 
-.stat-item:hover {
+.stat-card:hover {
   transform: translateY(-2px);
 }
 
-.stat-item.stat-success {
+.stat-card.stat-success {
   background: #f0f9eb;
 }
 
-.stat-item.stat-success .stat-number {
+.stat-card.stat-success .stat-value {
   color: #67c23a;
 }
 
-.stat-item.stat-error {
+.stat-card.stat-error {
   background: #fef0f0;
 }
 
-.stat-item.stat-error .stat-number {
+.stat-card.stat-error .stat-value {
   color: #f56c6c;
 }
 
-.stat-item.stat-info {
-  background: #ecf5ff;
-}
-
-.stat-item.stat-info .stat-number {
-  color: #409eff;
-}
-
-.stat-number {
-  display: block;
+.stat-value {
   font-size: 32px;
   font-weight: 700;
   color: #303133;
@@ -755,10 +928,26 @@ async function loadDemoImages() {
 }
 
 .stat-label {
-  display: block;
   font-size: 13px;
   color: #909399;
   margin-top: 6px;
+}
+
+/* ── 导出行 ── */
+.export-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid #ebeef5;
+  border-bottom: 1px solid #ebeef5;
+  margin-bottom: 20px;
+}
+
+.export-label {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
 }
 
 /* ── 缩略图网格 ── */
@@ -766,7 +955,6 @@ async function loadDemoImages() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 16px;
-  margin: 16px 0 24px;
 }
 
 .thumbnail-item {
@@ -776,6 +964,8 @@ async function loadDemoImages() {
   overflow: hidden;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
 }
 
 .thumbnail-item:hover {
@@ -829,9 +1019,9 @@ async function loadDemoImages() {
   padding: 8px 10px 4px;
   font-size: 12px;
   color: #303133;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-all;
+  white-space: normal;
+  line-height: 1.4;
 }
 
 .thumbnail-score {
@@ -846,11 +1036,30 @@ async function loadDemoImages() {
   color: #f56c6c;
 }
 
-/* ── 底部操作栏 ── */
-.footer-actions {
-  display: flex;
-  gap: 12px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
+.thumbnail-error {
+  display: block;
+  padding: 2px 10px 8px;
+  font-size: 11px;
+  color: #f56c6c;
+  word-break: break-all;
+  white-space: normal;
+  line-height: 1.4;
+  /* 默认显示三行 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.thumbnail-error:hover {
+  /* 鼠标悬停时显示全部 */
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  position: relative;
+  z-index: 10;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 </style>

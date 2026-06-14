@@ -8,6 +8,9 @@ import { PdfMerger } from '../src/merger.js';
 import { PdfSplitter } from '../src/splitter.js';
 import { PdfEncryptor } from '../src/encryptor.js';
 import { PdfWatermark } from '../src/watermark.js';
+import { PdfQualityChecker } from '../src/quality-checker.js';
+import { PdfPageNumber } from '../src/page-number.js';
+import { ImageToPdf } from '../src/image-to-pdf.js';
 
 const TEST_DIR = path.join(os.tmpdir(), 'pdf-processor-test-' + Date.now());
 
@@ -376,6 +379,302 @@ describe('PdfWatermark', () => {
         outputPath,
         { text: 'X' }
       )
+    ).rejects.toThrow('文件不存在');
+  });
+});
+
+describe('PdfQualityChecker', () => {
+  let testDir: string;
+
+  beforeAll(async () => {
+    testDir = path.join(TEST_DIR, 'quality');
+    fs.mkdirSync(testDir, { recursive: true });
+    await createTestPDF(path.join(testDir, 'source.pdf'), 5, 'Quality');
+  });
+
+  afterAll(() => {
+    fs.rmSync(TEST_DIR, { recursive: true, force: true });
+  });
+
+  it('应该返回质检结果对象', async () => {
+    const checker = new PdfQualityChecker();
+    const sourcePath = path.join(testDir, 'source.pdf');
+
+    const result = await checker.check(sourcePath);
+
+    expect(result).toHaveProperty('passed');
+    expect(result).toHaveProperty('issues');
+    expect(result).toHaveProperty('summary');
+    expect(Array.isArray(result.issues)).toBe(true);
+    expect(result.summary.pageCount).toBe(5);
+    expect(result.summary.fileSize).toBeGreaterThan(0);
+  });
+
+  it('文件不存在时应抛出错误', async () => {
+    const checker = new PdfQualityChecker();
+
+    await expect(
+      checker.check(path.join(testDir, 'not-exist.pdf'))
+    ).rejects.toThrow('文件不存在');
+  });
+
+  it('损坏的文件应返回未通过', async () => {
+    const checker = new PdfQualityChecker();
+    const badPath = path.join(testDir, 'bad.pdf');
+
+    fs.writeFileSync(badPath, 'this is not a pdf');
+
+    const result = await checker.check(badPath);
+    expect(result.passed).toBe(false);
+    expect(result.issues.some(i => i.type === 'error')).toBe(true);
+  });
+
+  it('空的 PDF 应报错', async () => {
+    const checker = new PdfQualityChecker();
+    const emptyPath = path.join(testDir, 'empty.pdf');
+
+    fs.writeFileSync(emptyPath, '');
+
+    const result = await checker.check(emptyPath);
+    expect(result.passed).toBe(false);
+    expect(result.issues.length).toBeGreaterThan(0);
+  });
+});
+
+describe('PdfPageNumber', () => {
+  let testDir: string;
+
+  beforeAll(async () => {
+    testDir = path.join(TEST_DIR, 'pagenum');
+    fs.mkdirSync(testDir, { recursive: true });
+    await createTestPDF(path.join(testDir, 'source.pdf'), 5, 'Page');
+  });
+
+  afterAll(() => {
+    fs.rmSync(TEST_DIR, { recursive: true, force: true });
+  });
+
+  it('应该添加阿拉伯数字页码', async () => {
+    const pn = new PdfPageNumber();
+    const sourcePath = path.join(testDir, 'source.pdf');
+    const outputPath = path.join(testDir, 'numbered.pdf');
+
+    await pn.addPageNumbers(sourcePath, outputPath, {
+      format: 'arabic',
+      position: 'bottom-center',
+    });
+
+    expect(fs.existsSync(outputPath)).toBe(true);
+
+    const bytes = fs.readFileSync(outputPath);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(5);
+  });
+
+  it('应该支持跳过封面页', async () => {
+    const pn = new PdfPageNumber();
+    const sourcePath = path.join(testDir, 'source.pdf');
+    const outputPath = path.join(testDir, 'numbered-skip.pdf');
+
+    await pn.addPageNumbers(sourcePath, outputPath, {
+      skipPages: 1,
+      startPage: 1,
+    });
+
+    expect(fs.existsSync(outputPath)).toBe(true);
+
+    const bytes = fs.readFileSync(outputPath);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(5);
+  });
+
+  it('应该支持前缀和后缀', async () => {
+    const pn = new PdfPageNumber();
+    const sourcePath = path.join(testDir, 'source.pdf');
+    const outputPath = path.join(testDir, 'numbered-prefix.pdf');
+
+    await pn.addPageNumbers(sourcePath, outputPath, {
+      prefix: 'P-',
+      suffix: '',
+      format: 'dash',
+    });
+
+    expect(fs.existsSync(outputPath)).toBe(true);
+
+    const bytes = fs.readFileSync(outputPath);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(5);
+  });
+
+  it('应该支持罗马数字格式', async () => {
+    const pn = new PdfPageNumber();
+    const sourcePath = path.join(testDir, 'source.pdf');
+    const outputPath = path.join(testDir, 'numbered-roman.pdf');
+
+    await pn.addPageNumbers(sourcePath, outputPath, {
+      format: 'roman',
+    });
+
+    expect(fs.existsSync(outputPath)).toBe(true);
+
+    const bytes = fs.readFileSync(outputPath);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(5);
+  });
+
+  it('应该触发进度回调', async () => {
+    const pn = new PdfPageNumber();
+    const sourcePath = path.join(testDir, 'source.pdf');
+    const outputPath = path.join(testDir, 'numbered-progress.pdf');
+    const progressCalls: [number, number][] = [];
+
+    await pn.addPageNumbers(
+      sourcePath,
+      outputPath,
+      {},
+      (current, total) => {
+        progressCalls.push([current, total]);
+      }
+    );
+
+    expect(progressCalls).toHaveLength(5);
+    expect(progressCalls[4]![0]).toBe(5);
+    expect(progressCalls[4]![1]).toBe(5);
+  });
+
+  it('文件不存在时应抛出错误', async () => {
+    const pn = new PdfPageNumber();
+
+    await expect(
+      pn.addPageNumbers(path.join(testDir, 'not-exist.pdf'), '/tmp/out.pdf', {})
+    ).rejects.toThrow('文件不存在');
+  });
+});
+
+describe('ImageToPdf', () => {
+  let testDir: string;
+
+  beforeAll(async () => {
+    testDir = path.join(TEST_DIR, 'img2pdf');
+    fs.mkdirSync(testDir, { recursive: true });
+    // 使用外部测试图片
+    const imgDir = '/tmp/pdf-test-images';
+    if (fs.existsSync(imgDir)) {
+      const files = fs.readdirSync(imgDir);
+      for (const file of files) {
+        fs.copyFileSync(
+          path.join(imgDir, file),
+          path.join(testDir, file)
+        );
+      }
+    }
+  });
+
+  afterAll(() => {
+    fs.rmSync(TEST_DIR, { recursive: true, force: true });
+  });
+
+  it('应该将多张 PNG 图片转换为 PDF', async () => {
+    const converter = new ImageToPdf();
+    const imagePaths = [
+      path.join(testDir, 'test-1.png'),
+      path.join(testDir, 'test-2.png'),
+      path.join(testDir, 'test-3.png'),
+    ];
+    const outputPath = path.join(testDir, 'output.pdf');
+
+    await converter.convert(imagePaths, outputPath, {
+      pageSize: 'A4',
+    });
+
+    expect(fs.existsSync(outputPath)).toBe(true);
+
+    const bytes = fs.readFileSync(outputPath);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(3);
+  });
+
+  it('应该支持 JPG 图片转换', async () => {
+    const converter = new ImageToPdf();
+    const imagePaths = [path.join(testDir, 'test-jpg.jpg')];
+    const outputPath = path.join(testDir, 'output-jpg.pdf');
+
+    await converter.convert(imagePaths, outputPath, {
+      pageSize: 'auto',
+    });
+
+    expect(fs.existsSync(outputPath)).toBe(true);
+
+    const bytes = fs.readFileSync(outputPath);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it('应该支持混合图片格式', async () => {
+    const converter = new ImageToPdf();
+    const imagePaths = [
+      path.join(testDir, 'test-1.png'),
+      path.join(testDir, 'test-jpg.jpg'),
+    ];
+    const outputPath = path.join(testDir, 'output-mixed.pdf');
+
+    await converter.convert(imagePaths, outputPath, {
+      pageSize: 'A4',
+    });
+
+    expect(fs.existsSync(outputPath)).toBe(true);
+
+    const bytes = fs.readFileSync(outputPath);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(2);
+  });
+
+  it('应该触发进度回调', async () => {
+    const converter = new ImageToPdf();
+    const imagePaths = [
+      path.join(testDir, 'test-1.png'),
+      path.join(testDir, 'test-2.png'),
+    ];
+    const outputPath = path.join(testDir, 'output-progress.pdf');
+    const progressCalls: [number, number][] = [];
+
+    await converter.convert(
+      imagePaths,
+      outputPath,
+      { pageSize: 'A4' },
+      (current, total) => {
+        progressCalls.push([current, total]);
+      }
+    );
+
+    expect(progressCalls).toHaveLength(2);
+    expect(progressCalls[0]).toEqual([1, 2]);
+    expect(progressCalls[1]).toEqual([2, 2]);
+  });
+
+  it('空图片列表应抛出错误', async () => {
+    const converter = new ImageToPdf();
+
+    await expect(
+      converter.convert([], '/tmp/out.pdf', {})
+    ).rejects.toThrow('图片列表不能为空');
+  });
+
+  it('不支持的图片格式应抛出错误', async () => {
+    const converter = new ImageToPdf();
+    const badPath = path.join(testDir, 'test.bmp');
+    fs.writeFileSync(badPath, 'fake bmp');
+
+    await expect(
+      converter.convert([badPath], '/tmp/out.pdf', {})
+    ).rejects.toThrow('不支持的图片格式');
+  });
+
+  it('文件不存在时应抛出错误', async () => {
+    const converter = new ImageToPdf();
+
+    await expect(
+      converter.convert(['/tmp/not-exist.png'], '/tmp/out.pdf', {})
     ).rejects.toThrow('文件不存在');
   });
 });

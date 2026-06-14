@@ -168,6 +168,13 @@ const moduleRouteMap: Record<string, string> = {
   md5: '/md5-checker',
   metadata: '/metadata',
   doc: '/doc-manager',
+  // 中文模块名映射
+  '数据校验': '/validator',
+  '图像检测': '/image-detector',
+  'PDF处理': '/pdf-processor',
+  'MD5校验': '/md5-checker',
+  '元数据封装': '/metadata',
+  '文档管理': '/doc-manager',
 };
 
 /** 功能模块列表 */

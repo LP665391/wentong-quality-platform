@@ -18,8 +18,15 @@ export interface WatermarkOptions {
 
 /**
  * PDF 水印处理器
+ * 支持中文水印文字（自动嵌入系统字体）
  */
 export class PdfWatermark {
+  /** 系统 CJK 字体候选路径 */
+  private static readonly CJK_FONT_PATHS = [
+    '/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
+    '/Library/Fonts/Arial Unicode.ttf',
+  ];
+
   /**
    * 为 PDF 添加文字水印
    * @param filePath - 源 PDF 文件路径
@@ -45,12 +52,20 @@ export class PdfWatermark {
       fileBytes.byteOffset + fileBytes.byteLength
     ));
 
-    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const hasNonAscii = this.hasNonAscii(options.text);
+
+    // 选择字体：中文使用 Arial Unicode，英文用 Helvetica
+    let font;
+    if (hasNonAscii) {
+      font = await this.embedCjkFont(doc);
+    } else {
+      font = await doc.embedFont(StandardFonts.Helvetica);
+    }
 
     const fontSize = options.fontSize ?? 48;
-    const opacity = Math.max(0, Math.min(1, options.opacity ?? 0.3));
+    const opacity = Math.max(0, Math.min(1, options.opacity ?? 0.5));
     const rotationDeg = options.rotation ?? 45;
-    const color = options.color ?? { r: 0.5, g: 0.5, b: 0.5 };
+    const color = options.color ?? { r: 0.2, g: 0.2, b: 0.2 };
     const position = options.position ?? 'center';
 
     const pages = doc.getPages();
@@ -60,7 +75,6 @@ export class PdfWatermark {
     for (const page of pages) {
       const { width, height } = page.getSize();
 
-      // 计算位置坐标
       const { x, y } = this.calcPosition(
         position,
         width,
@@ -81,7 +95,49 @@ export class PdfWatermark {
     }
 
     const outputBytes = await doc.save();
+    const outDir = filePath.substring(0, filePath.lastIndexOf('/') !== -1 ? filePath.lastIndexOf('/') : 0);
+    if (outDir && !fs.existsSync(outDir)) {
+      fs.mkdirSync(outDir, { recursive: true });
+    }
     fs.writeFileSync(outputPath, Buffer.from(outputBytes));
+  }
+
+  /**
+   * 嵌入 CJK 字体，支持中文水印
+   */
+  private async embedCjkFont(doc: PDFDocument) {
+    // 注册 fontkit
+    try {
+      const fontkit = require('fontkit');
+      (doc as any).registerFontkit(fontkit);
+    } catch {
+      // fontkit 不可用，回退到标准字体
+    }
+
+    // 尝试系统 CJK 字体
+    for (const fontPath of PdfWatermark.CJK_FONT_PATHS) {
+      try {
+        if (fs.existsSync(fontPath)) {
+          const fontBytes = fs.readFileSync(fontPath);
+          return await doc.embedFont(fontBytes);
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    // 回退到 Helvetica（仅支持 ASCII，中文会报错）
+    return doc.embedFont(StandardFonts.Helvetica);
+  }
+
+  /**
+   * 检查是否包含非 ASCII 字符（中文等）
+   */
+  private hasNonAscii(text: string): boolean {
+    for (let i = 0; i < text.length; i++) {
+      if (text.charCodeAt(i) > 127) return true;
+    }
+    return false;
   }
 
   /**

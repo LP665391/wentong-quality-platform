@@ -111,13 +111,13 @@ function navigate(path: string): void {
 }
 
 .sidebar__logo-icon {
-  font-size: 22px;
+  font-size: 28px;
   flex-shrink: 0;
 }
 
 .sidebar__logo-text {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
 }

@@ -1,8 +1,11 @@
 <template>
   <div class="module-page">
-    <div class="page-header">
-      <h2>🔒 MD5校验</h2>
-      <p class="page-desc">生成文件哈希值，验证文件完整性，防止文件篡改</p>
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <h2>🔒 MD5校验</h2>
+        <p class="page-desc">生成文件哈希值，验证文件完整性，防止文件篡改</p>
+      </div>
+      <el-button size="small" @click="showGuide = true">📖 使用说明</el-button>
     </div>
 
     <div class="wt-card">
@@ -127,6 +130,26 @@
               />
             </el-form-item>
 
+            <el-form-item label="文件类型">
+              <el-checkbox-group v-model="batchFileExtensions">
+                <el-checkbox value=".pdf" label="PDF" />
+                <el-checkbox value=".jpg" label="JPG" />
+                <el-checkbox value=".png" label="PNG" />
+                <el-checkbox value=".doc" label="DOC" />
+                <el-checkbox value=".xlsx" label="Excel" />
+                <el-checkbox value=".txt" label="TXT" />
+              </el-checkbox-group>
+              <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+                不选则计算所有文件
+              </div>
+            </el-form-item>
+
+            <!-- 文件计数 -->
+            <el-form-item v-if="batchFileCount !== null" label="扫描结果">
+              <el-tag type="info">共 {{ batchFileCount }} 个文件</el-tag>
+              <span style="margin-left: 8px; font-size: 12px; color: #909399;">匹配所选文件类型</span>
+            </el-form-item>
+
             <el-form-item>
               <el-button
                 type="success"
@@ -153,6 +176,16 @@
 
             <!-- 结果表格 -->
             <el-form-item v-if="batchResults.length > 0" label="计算结果">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="font-size: 14px; color: #606266;">
+                  共 {{ batchResults.length }} 个文件
+                </span>
+                <div>
+                  <el-button size="small" :icon="Download" @click="exportBatchCSV">导出 CSV</el-button>
+                  <el-button size="small" :icon="Document" @click="exportMd5Manifest">导出 MD5 清单</el-button>
+                  <el-button size="small" type="primary" :icon="EditPen" @click="showReportDialog = true">生成归档报告</el-button>
+                </div>
+              </div>
               <el-table
                 :data="batchResults"
                 stripe
@@ -277,15 +310,115 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
+
+        <!-- ============================================================ -->
+        <!-- 清单比对 Tab                                                   -->
+        <!-- ============================================================ -->
+        <el-tab-pane label="📋 清单比对" name="manifest-compare">
+          <el-form label-width="120px" label-position="left">
+            <el-form-item label="选择清单文件">
+              <div class="input-with-btn">
+                <el-input v-model="manifestFilePath" placeholder="选择之前导出的 .md5 清单文件" readonly />
+                <el-button type="primary" @click="selectManifestFile" :disabled="manifestComparing">浏览</el-button>
+              </div>
+            </el-form-item>
+            <el-form-item label="扫描目录">
+              <div class="input-with-btn">
+                <el-input v-model="manifestDirPath" placeholder="选择要比对的目录" readonly />
+                <el-button @click="selectManifestDir" :disabled="manifestComparing">浏览</el-button>
+              </div>
+            </el-form-item>
+            <el-form-item label="哈希算法">
+              <el-select v-model="manifestAlgorithm" :disabled="manifestComparing" style="width: 200px">
+                <el-option label="MD5" value="md5" />
+                <el-option label="SHA-256" value="sha256" />
+              </el-select>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="success" size="large" :disabled="!manifestFilePath || !manifestDirPath || manifestComparing" :loading="manifestComparing" @click="doManifestCompare">
+                {{ manifestComparing ? '比对中...' : '开始比对' }}
+              </el-button>
+            </el-form-item>
+            <!-- 比对结果 -->
+            <el-form-item v-if="manifestResult" label="比对结果">
+              <el-alert :title="manifestSummary" :type="manifestResult.matched.length === manifestResult.matched.length + manifestResult.modified.length + manifestResult.missing.length ? 'success' : 'warning'" show-icon style="margin-bottom: 16px" />
+            </el-form-item>
+            <el-form-item v-if="manifestResult && manifestResult.matched.length > 0" label="✅ 一致">
+              <div v-for="item in manifestResult.matched" :key="item.fileName" style="font-size: 13px; color: #67c23a;">{{ item.fileName }}</div>
+            </el-form-item>
+            <el-form-item v-if="manifestResult && manifestResult.modified.length > 0" label="⚠️ 已修改">
+              <div v-for="item in manifestResult.modified" :key="item.fileName" style="font-size: 13px; color: #e6a23c;">
+                {{ item.fileName }}（期望: {{ item.expectedHash.substring(0, 12) }}... → 实际: {{ item.actualHash.substring(0, 12) }}...）
+              </div>
+            </el-form-item>
+            <el-form-item v-if="manifestResult && manifestResult.missing.length > 0" label="❌ 缺失">
+              <div v-for="item in manifestResult.missing" :key="item.fileName" style="font-size: 13px; color: #f56c6c;">{{ item.fileName }}</div>
+            </el-form-item>
+            <el-form-item v-if="manifestResult && manifestResult.added.length > 0" label="🆕 新增">
+              <div v-for="item in manifestResult.added" :key="item.fileName" style="font-size: 13px; color: #409eff;">{{ item.fileName }}</div>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
       </el-tabs>
     </div>
+
+    <!-- 使用说明对话框 -->
+    <el-dialog v-model="showGuide" title="📖 使用说明 — MD5校验" width="650px">
+      <div style="line-height: 1.8; font-size: 14px; color: #303133; padding: 0 8px;">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1677ff;">一、功能概述</h3>
+        <p style="margin: 0 0 16px 0; color: #595959;">计算文件哈希值，验证文件完整性，防止文件篡改，支持单文件/批量计算、哈希比对和清单比对。</p>
+
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1677ff;">二、操作步骤</h3>
+        <ol style="margin: 0 0 16px 0; padding-left: 20px;">
+          <li style="margin-bottom: 6px;"><strong>单文件计算：</strong>选择文件 → 选择算法（MD5/SHA-1/SHA-256/SHA-512）→ 点击"计算哈希" → 查看并复制哈希值。</li>
+          <li style="margin-bottom: 6px;"><strong>批量计算：</strong>选择目录 → 选择算法 → 设置并发数和文件类型过滤 → 点击"开始批量计算" → 查看结果表 → 导出 CSV / MD5 清单。</li>
+          <li style="margin-bottom: 6px;"><strong>哈希比对：</strong>选择文件 → 选择算法 → 输入期望哈希值 → 点击"开始比对" → 查看匹配结果。</li>
+          <li style="margin-bottom: 6px;"><strong>清单比对：</strong>选择之前导出的 .md5 清单文件 → 选择要比对的目录 → 开始比对 → 查看一致/已修改/缺失/新增文件。</li>
+          <li style="margin-bottom: 6px;"><strong>生成归档报告：</strong>在批量结果中点击"生成归档报告"，填写机构名称、操作人等信息后生成正式校验报告。</li>
+        </ol>
+
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1677ff;">三、常见问题</h3>
+        <ul style="margin: 0 0 0 0; padding-left: 20px;">
+          <li style="margin-bottom: 4px;">支持算法：MD5、SHA-1、SHA-256、SHA-512</li>
+          <li style="margin-bottom: 4px;">批量模式支持并发加速（1-16 线程），可设置文件类型过滤</li>
+          <li style="margin-bottom: 4px;">可导出 MD5 清单文件（.md5），用于后续清单比对</li>
+          <li style="margin-bottom: 4px;">清单比对可快速识别新增、缺失和被修改的文件</li>
+        </ul>
+      </div>
+    </el-dialog>
+
+    <!-- 归档报告对话框 -->
+    <el-dialog v-model="showReportDialog" title="生成归档报告" width="500px">
+      <el-form label-width="100px">
+        <el-form-item label="机构名称">
+          <el-input v-model="reportOptions.organization" placeholder="如：连云港文安档案科技有限公司" />
+        </el-form-item>
+        <el-form-item label="操作人">
+          <el-input v-model="reportOptions.operator" placeholder="输入您的姓名" />
+        </el-form-item>
+        <el-form-item label="任务名称">
+          <el-input v-model="reportOptions.taskName" placeholder="如：2026年档案数字化校验" />
+        </el-form-item>
+        <el-form-item label="保存路径">
+          <div class="input-with-btn">
+            <el-input v-model="reportOutputPath" placeholder="报告保存路径" readonly />
+            <el-button @click="selectReportOutput">浏览</el-button>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showReportDialog = false">取消</el-button>
+        <el-button type="primary" :loading="generatingReport" @click="doGenerateReport">生成报告</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
-import { CopyDocument } from '@element-plus/icons-vue';
+import { useTaskStore } from '@/stores/task';
+import { CopyDocument, Download, Document, EditPen } from '@element-plus/icons-vue';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -313,6 +446,10 @@ interface BatchProgress {
 
 const activeTab = ref('single');
 
+// -- 使用说明 --
+const showGuide = ref(false);
+const taskStore = useTaskStore();
+
 // -- 单文件 --
 const computing = ref(false);
 const singleFilePath = ref('');
@@ -324,6 +461,13 @@ const batchComputing = ref(false);
 const batchDirPath = ref('');
 const batchAlgorithm = ref<string>('md5');
 const batchConcurrency = ref(4);
+const batchFileExtensions = ref<string[]>([]);
+const batchFileCount = ref<number | null>(null);
+
+// 监听文件类型变化，重新统计
+watch(batchFileExtensions, () => {
+  if (batchDirPath.value) updateFileCount();
+});
 const batchResults = ref<HashResult[]>([]);
 const batchProgress = ref<BatchProgress>({
   show: false,
@@ -347,12 +491,64 @@ const canVerify = computed(
     verifyExpectedHash.value.trim().length > 0,
 );
 
+// -- 清单比对 --
+const manifestComparing = ref(false);
+const manifestFilePath = ref('');
+const manifestDirPath = ref('');
+const manifestAlgorithm = ref<string>('md5');
+const manifestResult = ref<ManifestCompareResult | null>(null);
+
+interface ManifestItem {
+  fileName: string;
+  expectedHash: string;
+  actualHash: string;
+}
+
+interface ManifestCompareResult {
+  matched: ManifestItem[];
+  modified: ManifestItem[];
+  missing: ManifestItem[];
+  added: ManifestItem[];
+}
+
+const manifestSummary = computed(() => {
+  if (!manifestResult.value) return '';
+  const r = manifestResult.value;
+  const total = r.matched.length + r.modified.length + r.missing.length + r.added.length;
+  const matched = r.matched.length;
+  const modified = r.modified.length;
+  const missing = r.missing.length;
+  const added = r.added.length;
+  if (modified === 0 && missing === 0 && added === 0) {
+    return `✅ 全部一致，共 ${matched} 个文件`;
+  }
+  return `⚠️ 一致: ${matched} | 已修改: ${modified} | 缺失: ${missing} | 新增: ${added}（共 ${total} 个文件）`;
+});
+
+// -- 归档报告 --
+const showReportDialog = ref(false);
+const generatingReport = ref(false);
+const reportOptions = ref({
+  organization: '',
+  operator: '',
+  taskName: '',
+});
+const reportOutputPath = ref('');
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function getApi() {
   return (window as any).electronAPI;
+}
+
+function getFileName(filePath: string): string {
+  return filePath.split(/[/\\\\]/).pop() ?? filePath;
+}
+
+function getManifestDirName(): string {
+  return manifestDirPath.value.split(/[/\\\\]/).pop() ?? manifestDirPath.value;
 }
 
 function formatFileSize(bytes: number): string {
@@ -427,6 +623,7 @@ async function computeSingleHash(): Promise<void> {
         type: 'success',
         duration: 3000,
       });
+      taskStore.addTask({ name: `${singleAlgorithm.value.toUpperCase()}哈希 - ${singleResult.value.fileName}`, module: 'MD5校验', status: 'completed' });
     } else {
       ElNotification({
         title: '计算失败',
@@ -434,6 +631,7 @@ async function computeSingleHash(): Promise<void> {
         type: 'error',
         duration: 5000,
       });
+      taskStore.addTask({ name: `哈希计算 - ${getFileName(singleFilePath.value)}`, module: 'MD5校验', status: 'failed', error: res.error ?? '未知错误' });
     }
   } catch (err: any) {
     ElNotification({
@@ -461,9 +659,27 @@ async function selectBatchDir(): Promise<void> {
     const dir: string = await api.selectDirectory();
     if (dir) {
       batchDirPath.value = dir;
+      batchFileCount.value = null;
+      await updateFileCount();
     }
   } catch (err: any) {
     ElMessage.error(`选择目录失败：${err.message ?? err}`);
+  }
+}
+
+async function updateFileCount(): Promise<void> {
+  const api = getApi();
+  if (!api?.countMd5Files || !batchDirPath.value) return;
+  try {
+    const res = await api.countMd5Files({
+      dirPath: batchDirPath.value,
+      fileExtensions: batchFileExtensions.value.length > 0 ? [...batchFileExtensions.value] : undefined,
+    });
+    if (res.success) {
+      batchFileCount.value = res.count;
+    }
+  } catch {
+    // 静默失败
   }
 }
 
@@ -496,6 +712,7 @@ async function computeBatchHash(): Promise<void> {
       dirPath: batchDirPath.value,
       algorithm: batchAlgorithm.value,
       concurrency: batchConcurrency.value,
+      fileExtensions: batchFileExtensions.value.length > 0 ? [...batchFileExtensions.value] : undefined,
     });
 
     if (cleanup) cleanup();
@@ -508,6 +725,7 @@ async function computeBatchHash(): Promise<void> {
         type: 'success',
         duration: 5000,
       });
+      taskStore.addTask({ name: `批量${batchAlgorithm.value.toUpperCase()} - ${batchResults.value.length}个文件`, module: 'MD5校验', status: 'completed' });
     } else {
       ElNotification({
         title: '批量计算失败',
@@ -515,6 +733,7 @@ async function computeBatchHash(): Promise<void> {
         type: 'error',
         duration: 8000,
       });
+      taskStore.addTask({ name: `批量${batchAlgorithm.value.toUpperCase()} - ${batchDirPath.value}`, module: 'MD5校验', status: 'failed', error: res.error ?? '未知错误' });
     }
   } catch (err: any) {
     ElNotification({
@@ -582,6 +801,7 @@ async function doVerify(): Promise<void> {
           type: 'success',
           duration: 5000,
         });
+        taskStore.addTask({ name: `哈希比对 - ${verifyFileName.value}`, module: 'MD5校验', status: 'completed' });
       } else {
         ElNotification({
           title: '哈希不匹配 ❌',
@@ -589,6 +809,7 @@ async function doVerify(): Promise<void> {
           type: 'warning',
           duration: 8000,
         });
+        taskStore.addTask({ name: `哈希比对 - ${verifyFileName.value}`, module: 'MD5校验', status: 'failed', error: '哈希值不匹配' });
       }
     } else {
       ElNotification({
@@ -597,6 +818,7 @@ async function doVerify(): Promise<void> {
         type: 'error',
         duration: 5000,
       });
+      taskStore.addTask({ name: `哈希比对 - ${verifyFileName.value}`, module: 'MD5校验', status: 'failed', error: res.error ?? '未知错误' });
     }
   } catch (err: any) {
     ElNotification({
@@ -609,12 +831,218 @@ async function doVerify(): Promise<void> {
     verifying.value = false;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Export helpers
+// ---------------------------------------------------------------------------
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportBatchCSV() {
+  const header = '文件名,哈希值,算法,文件大小,耗时\n';
+  const rows = batchResults.value.map(r =>
+    `"${r.fileName}","${r.hash}","${r.algorithm}",${r.fileSize},${r.duration}`
+  ).join('\n');
+  const blob = new Blob(['\ufeff' + header + rows], { type: 'text/csv;charset=utf-8;' });
+  downloadBlob(blob, `hash-results-${Date.now()}.csv`);
+}
+
+function exportBatchJSON() {
+  const blob = new Blob([JSON.stringify(batchResults.value, null, 2)], { type: 'application/json' });
+  downloadBlob(blob, `hash-results-${Date.now()}.json`);
+}
+
+// ---------------------------------------------------------------------------
+// MD5 清单导出
+// ---------------------------------------------------------------------------
+
+function exportMd5Manifest() {
+  const algorithm = batchAlgorithm.value.toUpperCase();
+  const header = [
+    `# MD5 Manifest`,
+    `# Algorithm: ${algorithm}`,
+    `# Generated: ${new Date().toISOString()}`,
+    `# Format: fileName<TAB>hash`,
+    `#`,
+  ].join('\n');
+  const rows = batchResults.value.map(r => `${r.fileName}\t${r.hash}`);
+  const content = header + '\n' + rows.join('\n');
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+  downloadBlob(blob, `md5-manifest-${Date.now()}.md5`);
+  ElMessage.success('MD5 清单已导出');
+  taskStore.addTask({ name: `导出MD5清单 - ${batchResults.value.length}个文件`, module: 'MD5校验', status: 'completed' });
+}
+
+// ---------------------------------------------------------------------------
+// 归档报告
+// ---------------------------------------------------------------------------
+
+async function selectReportOutput(): Promise<void> {
+  const api = getApi();
+  if (!api?.selectDirectory) {
+    ElMessage.warning('目录选择功能仅在桌面应用中可用');
+    return;
+  }
+  try {
+    const dir: string = await api.selectDirectory();
+    if (dir) {
+      const timestamp = new Date().toISOString().slice(0, 10);
+      reportOutputPath.value = `${dir}/归档报告-${timestamp}.txt`;
+    }
+  } catch (err: any) {
+    ElMessage.error(`选择目录失败：${err.message ?? err}`);
+  }
+}
+
+async function doGenerateReport(): Promise<void> {
+  const api = getApi();
+  if (!api?.generateMd5Report) {
+    ElMessage.warning('报告生成功能仅在桌面应用中可用');
+    return;
+  }
+
+  generatingReport.value = true;
+
+  try {
+    const res = await api.generateMd5Report({
+      results: batchResults.value.map(r => ({ ...r })),
+      options: {
+        organization: reportOptions.value.organization,
+        operator: reportOptions.value.operator,
+        taskName: reportOptions.value.taskName,
+      },
+      outputPath: reportOutputPath.value,
+    });
+
+    if (res.success) {
+      ElNotification({
+        title: '报告生成成功',
+        message: res.filePath ?? '报告已保存',
+        type: 'success',
+        duration: 5000,
+      });
+      showReportDialog.value = false;
+      taskStore.addTask({ name: `生成归档报告 - ${reportOptions.value.taskName || '校验报告'}`, module: 'MD5校验', status: 'completed' });
+    } else {
+      ElNotification({
+        title: '报告生成失败',
+        message: res.error ?? '未知错误',
+        type: 'error',
+        duration: 5000,
+      });
+      taskStore.addTask({ name: `生成归档报告 - ${reportOptions.value.taskName || '校验报告'}`, module: 'MD5校验', status: 'failed', error: res.error ?? '未知错误' });
+    }
+  } catch (err: any) {
+    ElNotification({
+      title: '报告生成异常',
+      message: err.message ?? String(err),
+      type: 'error',
+      duration: 5000,
+    });
+  } finally {
+    generatingReport.value = false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 清单比对
+// ---------------------------------------------------------------------------
+
+async function selectManifestFile(): Promise<void> {
+  const api = getApi();
+  if (!api?.selectFile) {
+    ElMessage.warning('文件选择功能仅在桌面应用中可用');
+    return;
+  }
+  try {
+    const files: string[] = await api.selectFile({
+      filters: [{ name: 'MD5 清单', extensions: ['md5', 'txt', 'manifest'] }],
+    });
+    if (files && files.length > 0) {
+      manifestFilePath.value = files[0];
+    }
+  } catch (err: any) {
+    ElMessage.error(`选择清单文件失败：${err.message ?? err}`);
+  }
+}
+
+async function selectManifestDir(): Promise<void> {
+  const api = getApi();
+  if (!api?.selectDirectory) {
+    ElMessage.warning('目录选择功能仅在桌面应用中可用');
+    return;
+  }
+  try {
+    const dir: string = await api.selectDirectory();
+    if (dir) {
+      manifestDirPath.value = dir;
+    }
+  } catch (err: any) {
+    ElMessage.error(`选择目录失败：${err.message ?? err}`);
+  }
+}
+
+async function doManifestCompare(): Promise<void> {
+  if (!manifestFilePath.value || !manifestDirPath.value) return;
+  const api = getApi();
+  if (!api?.manifestCompare) {
+    ElMessage.warning('清单比对功能仅在桌面应用中可用');
+    return;
+  }
+
+  manifestComparing.value = true;
+  manifestResult.value = null;
+
+  try {
+    const res = await api.manifestCompare({
+      manifestPath: manifestFilePath.value,
+      dirPath: manifestDirPath.value,
+      algorithm: manifestAlgorithm.value,
+    });
+
+    if (res.success) {
+      manifestResult.value = res.result as ManifestCompareResult;
+      ElNotification({
+        title: '清单比对完成',
+        message: manifestSummary.value,
+        type: res.result.modified.length === 0 && res.result.missing.length === 0 && res.result.added.length === 0 ? 'success' : 'warning',
+        duration: 5000,
+      });
+      taskStore.addTask({ name: `清单比对 - ${getManifestDirName()}`, module: 'MD5校验', status: 'completed' });
+    } else {
+      ElNotification({
+        title: '清单比对失败',
+        message: res.error ?? '未知错误',
+        type: 'error',
+        duration: 5000,
+      });
+      taskStore.addTask({ name: `清单比对 - ${getManifestDirName()}`, module: 'MD5校验', status: 'failed', error: res.error ?? '未知错误' });
+    }
+  } catch (err: any) {
+    ElNotification({
+      title: '清单比对异常',
+      message: err.message ?? String(err),
+      type: 'error',
+      duration: 5000,
+    });
+  } finally {
+    manifestComparing.value = false;
+  }
+}
 </script>
 
 <style scoped>
 .module-page {
   max-width: 1200px;
   margin: 0 auto;
+  padding-top: 20px;
 }
 
 .page-header {

@@ -25,7 +25,7 @@ export const useAppStore = defineStore('app', () => {
   // -------------------------------------------------------------------------
 
   /** 应用版本号 */
-  const version = ref('1.0.0');
+  const version = ref('5.6.9');
 
   /** 当前平台标识 (darwin | win32 | linux | browser) */
   const platform = ref('browser');

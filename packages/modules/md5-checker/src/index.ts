@@ -5,3 +5,14 @@ export type {
   HashResult,
   BatchProgressCallback,
 } from './hasher.js';
+
+// 档案管理
+export {
+  exportManifest,
+  compareManifest,
+  generateArchiveReport,
+} from './hasher.js';
+export type {
+  ManifestCompareResult,
+  ArchiveReportOptions,
+} from './hasher.js';

@@ -1,8 +1,11 @@
 <template>
   <div class="module-page">
-    <div class="page-header">
-      <h2>📊 数据校验</h2>
-      <p class="page-desc">对 Excel/CSV 文件进行格式、内容、逻辑校验，快速发现数据问题</p>
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <h2>📊 数据校验</h2>
+        <p class="page-desc">对 Excel/CSV 文件进行格式、内容、逻辑校验，快速发现数据问题</p>
+      </div>
+      <el-button size="small" @click="showGuide = true">📖 使用说明</el-button>
     </div>
 
     <!-- ── 步骤一：选择文件 ── -->
@@ -454,6 +457,31 @@
         </div>
       </div>
     </div>
+    <!-- 使用说明对话框 -->
+    <el-dialog v-model="showGuide" title="📖 使用说明 — 数据校验" width="650px">
+      <div style="line-height: 1.8; font-size: 14px; color: #303133; padding: 0 8px;">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1677ff;">一、功能概述</h3>
+        <p style="margin: 0 0 16px 0; color: #595959;">对 Excel/CSV 文件进行格式、内容、逻辑校验，确保数据符合规范，快速发现数据问题。</p>
+
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1677ff;">二、操作步骤</h3>
+        <ol style="margin: 0 0 16px 0; padding-left: 20px;">
+          <li style="margin-bottom: 6px;"><strong>步骤1：</strong>选择文件 — 点击"浏览"选择待校验的 Excel/CSV 文件，支持单文件和批量模式。</li>
+          <li style="margin-bottom: 6px;"><strong>步骤2：</strong>选择模板/配置规则 — 根据文件类型选择档案模板和校验模式（宽松/标准/严格）。</li>
+          <li style="margin-bottom: 6px;"><strong>步骤3：</strong>开始校验 — 点击"开始校验"，系统自动解析文件并逐行逐列校验。</li>
+          <li style="margin-bottom: 6px;"><strong>步骤4：</strong>查看结果 — 查看通过/失败统计，错误明细表格列出每一条问题的行号、字段、描述和建议。</li>
+          <li style="margin-bottom: 6px;"><strong>步骤5：</strong>导出报告 — 点击 Excel/JSON/CSV 按钮导出校验报告，方便存档或反馈。</li>
+        </ol>
+
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1677ff;">三、常见问题</h3>
+        <ul style="margin: 0 0 0 0; padding-left: 20px;">
+          <li style="margin-bottom: 4px;">支持格式：<strong>.xlsx、.xls、.csv</strong></li>
+          <li style="margin-bottom: 4px;">单次最大支持 <strong>10 万行</strong> 数据</li>
+          <li style="margin-bottom: 4px;">校验报告可导出为 Excel / JSON / CSV 三种格式</li>
+          <li style="margin-bottom: 4px;">批量模式下可一次校验多个文件，汇总查看整体通过率</li>
+          <li style="margin-bottom: 4px;">如遇大文件，建议先选宽松模式快速筛查，再用标准模式详细校验</li>
+        </ul>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -462,6 +490,7 @@ import { ref, computed, onMounted, nextTick } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
 import { Download, Monitor, User, InfoFilled, Document, Close } from '@element-plus/icons-vue';
 import { useAppStore } from '@/stores/app';
+import { useTaskStore } from '@/stores/task';
 import { type ComparisonData, generateSupplierQCReport } from '@/utils/demo-scenarios';
 
 // ---------------------------------------------------------------------------
@@ -546,7 +575,9 @@ const progressMessage = ref('');
 const taskId = ref('');
 const report = ref<ValidationReport | null>(null);
 const showReportPreview = ref(false);
+const showGuide = ref(false);
 const appStore = useAppStore();
+const taskStore = useTaskStore();
 
 // 分页相关
 const currentPage = ref(1);
@@ -910,6 +941,7 @@ async function startBatchValidation(): Promise<void> {
   progressMessage.value = '';
 
   // 显示汇总结果
+  taskStore.addTask({ name: `数据校验 - ${batchFiles.value.length}个文件`, module: '数据校验', status: errorCount > 0 ? 'failed' : 'completed', error: errorCount > 0 ? `${errorCount}个文件校验失败` : undefined });
   ElNotification({
     title: '批量校验完成',
     message: `共 ${batchFiles.value.length} 个文件，成功 ${successCount} 个，失败 ${errorCount} 个`,
@@ -983,6 +1015,7 @@ async function startValidation(): Promise<void> {
       // 立即结束校验状态，避免按钮卡在"校验中..."
       validating.value = false;
       await nextTick(); // 确保 DOM 更新完成
+      taskStore.addTask({ name: `数据校验 - ${getFileName(filePath.value)}`, module: '数据校验', status: 'completed' });
       ElNotification({
         title: '校验完成',
         message: `发现 ${report.value!.totalErrors} 个错误，${report.value!.totalWarnings} 个警告`,
@@ -992,6 +1025,7 @@ async function startValidation(): Promise<void> {
     } else {
       validating.value = false;
       await nextTick();
+      taskStore.addTask({ name: `数据校验 - ${getFileName(filePath.value)}`, module: '数据校验', status: 'failed', error: runRes.error ?? '未知错误' });
       ElNotification({
         title: '校验失败',
         message: runRes.error ?? '未知错误',
@@ -1109,6 +1143,7 @@ function loadDemoData() {
 .module-page {
   max-width: 1200px;
   margin: 0 auto;
+  padding-top: 20px;
 }
 
 .page-header {
