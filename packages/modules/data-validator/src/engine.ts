@@ -83,6 +83,7 @@ interface PresetRuleEntry {
 /**
  * 标准预设：必填 + 格式 + 范围
  * 注意：format 规则的 formatType 默认为空，需用户根据实际数据补充（如 'date', 'number', 'email' 等）
+ * 注意：range 规则默认禁用，因为需要对数值字段单独配置，避免对字符串字段产生误报
  */
 function buildStandardPreset(fields: string[]): PresetRuleEntry[] {
   return [
@@ -96,7 +97,7 @@ function buildStandardPreset(fields: string[]): PresetRuleEntry[] {
     },
     {
       type: 'range',
-      config: { enabled: true, severity: 'warning' as const, fields, rangeType: 'number', min: 0 },
+      config: { enabled: false, severity: 'warning' as const, fields, rangeType: 'number', min: 0 },
     },
   ];
 }
