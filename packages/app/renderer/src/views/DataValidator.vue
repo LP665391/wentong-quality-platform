@@ -10,8 +10,17 @@
       <div class="step-title">
         <span class="step-badge">1</span>
         <span>选择文件</span>
+        <el-switch
+          v-model="batchMode"
+          active-text="批量模式"
+          inactive-text="单文件"
+          :disabled="validating"
+          style="margin-left: auto;"
+        />
       </div>
-      <el-form label-width="80px" label-position="left">
+      
+      <!-- 单文件模式 -->
+      <el-form v-if="!batchMode" label-width="80px" label-position="left">
         <el-form-item label="校验文件">
           <div class="input-with-btn">
             <el-input
@@ -27,6 +36,49 @@
             <el-button type="success" v-if="isBrowser" @click="loadDemoData" :disabled="validating" plain>
                加载演示数据
             </el-button>
+          </div>
+        </el-form-item>
+        <el-form-item label="输出目录">
+          <div class="input-with-btn">
+            <el-input
+              v-model="outputPath"
+              placeholder="校验报告输出目录（可选）"
+              readonly
+              clearable
+              @clear="outputPath = ''"
+            />
+            <el-button @click="selectOutput" :disabled="validating">浏览</el-button>
+          </div>
+        </el-form-item>
+      </el-form>
+      
+      <!-- 批量模式 -->
+      <el-form v-else label-width="80px" label-position="left">
+        <el-form-item label="校验文件">
+          <div class="batch-file-list">
+            <div v-if="batchFiles.length === 0" class="batch-empty">
+              尚未选择文件
+            </div>
+            <div v-else class="batch-files">
+              <div v-for="(file, index) in batchFiles" :key="index" class="batch-file-item">
+                <el-icon><Document /></el-icon>
+                <span class="file-name">{{ getFileName(file) }}</span>
+                <el-button type="danger" link size="small" @click="removeBatchFile(index)">
+                  <el-icon><Close /></el-icon>
+                </el-button>
+              </div>
+            </div>
+          </div>
+          <div class="batch-actions">
+            <el-button type="primary" @click="selectBatchFiles" :disabled="validating">
+              选择文件
+            </el-button>
+            <el-button @click="clearBatchFiles" :disabled="validating || batchFiles.length === 0">
+              清空
+            </el-button>
+            <span v-if="batchFiles.length > 0" class="batch-count">
+              已选择 {{ batchFiles.length }} 个文件
+            </span>
           </div>
         </el-form-item>
         <el-form-item label="输出目录">
@@ -164,8 +216,62 @@
       </div>
     </div>
 
+    <!-- ── 批量校验结果汇总 ── -->
+    <div v-if="batchMode && batchReports.size > 0" class="wt-card result-card">
+      <div class="step-title">
+        <span class="step-badge result-badge">📊</span>
+        <span>批量校验汇总</span>
+      </div>
+
+      <!-- 汇总统计 -->
+      <el-row :gutter="16" class="stats-row">
+        <el-col :span="6">
+          <div class="stat-card">
+            <div class="stat-value">{{ batchReports.size }}</div>
+            <div class="stat-label">校验文件数</div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-card stat-success">
+            <div class="stat-value">{{ batchPassCount }}</div>
+            <div class="stat-label">可入库</div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-card stat-warning">
+            <div class="stat-value">{{ batchWarningCount }}</div>
+            <div class="stat-label">需整改</div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-card stat-error">
+            <div class="stat-value">{{ batchFailCount }}</div>
+            <div class="stat-label">需返工</div>
+          </div>
+        </el-col>
+      </el-row>
+
+      <!-- 文件列表 -->
+      <div class="batch-result-list">
+        <div v-for="(report, filePath) in batchReports" :key="filePath" class="batch-result-item">
+          <el-icon><Document /></el-icon>
+          <span class="file-name">{{ getFileName(filePath as string) }}</span>
+          <el-tag
+            :type="report.grade === 'pass' ? 'success' : report.grade === 'warning' ? 'warning' : 'danger'"
+            size="small"
+            effect="dark"
+          >
+            {{ report.gradeLabel }}
+          </el-tag>
+          <span class="file-stats">
+            {{ report.totalErrors }} 错误 / {{ report.totalWarnings }} 警告
+          </span>
+        </div>
+      </div>
+    </div>
+
     <!-- ── 校验结果 ── -->
-    <div v-if="report" class="wt-card result-card">
+    <div v-if="report && !batchMode" class="wt-card result-card">
       <div class="step-title">
         <span class="step-badge result-badge">✓</span>
         <span>校验结果</span>
@@ -354,7 +460,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { ElMessage, ElNotification } from 'element-plus';
-import { Download, Monitor, User, InfoFilled } from '@element-plus/icons-vue';
+import { Download, Monitor, User, InfoFilled, Document, Close } from '@element-plus/icons-vue';
 import { useAppStore } from '@/stores/app';
 import { type ComparisonData } from '@/utils/demo-scenarios';
 
@@ -420,6 +526,16 @@ const validating = ref(false);
 const exporting = ref(false);
 const isBrowser = computed(() => !(window as any).electronAPI && !(window as any).api);
 const exportFormat = ref<'excel' | 'json' | 'csv' | ''>('');
+
+// 批量校验相关
+const batchMode = ref(false);
+const batchFiles = ref<string[]>([]);
+const batchReports = ref<Map<string, ValidationReport>>(new Map());
+const batchProgress = ref<{ current: number; total: number; fileName: string }>({
+  current: 0,
+  total: 0,
+  fileName: '',
+});
 
 const progressPercent = ref(0);
 const progressStatus = ref<ValidationProgress['status']>('idle');
@@ -510,7 +626,37 @@ function getErrorTypeLabel(type: string): string {
 // Computed
 // ---------------------------------------------------------------------------
 
-const canStart = computed(() => filePath.value.trim().length > 0 && preset.value.length > 0);
+const canStart = computed(() => {
+  if (batchMode.value) {
+    return batchFiles.value.length > 0 && preset.value.length > 0;
+  }
+  return filePath.value.trim().length > 0 && preset.value.length > 0;
+});
+
+// 批量校验统计
+const batchPassCount = computed(() => {
+  let count = 0;
+  batchReports.value.forEach(report => {
+    if (report.grade === 'pass') count++;
+  });
+  return count;
+});
+
+const batchWarningCount = computed(() => {
+  let count = 0;
+  batchReports.value.forEach(report => {
+    if (report.grade === 'warning') count++;
+  });
+  return count;
+});
+
+const batchFailCount = computed(() => {
+  let count = 0;
+  batchReports.value.forEach(report => {
+    if (report.grade === 'fail') count++;
+  });
+  return count;
+});
 
 // 智能推荐模式
 const recommendedPreset = computed(() => {
@@ -668,7 +814,122 @@ async function selectOutput(): Promise<void> {
   }
 }
 
+// 批量校验相关方法
+async function selectBatchFiles(): Promise<void> {
+  const api = getApi();
+  if (!api?.selectMultipleFiles) {
+    ElMessage.warning('批量选择文件功能仅在桌面应用中可用');
+    return;
+  }
+  try {
+    const files: string[] = await api.selectMultipleFiles({
+      filters: [
+        { name: 'Excel/CSV 文件', extensions: ['xlsx', 'xls', 'csv'] },
+        { name: '所有文件', extensions: ['*'] },
+      ],
+    });
+    if (files && files.length > 0) {
+      // 追加到已有列表，去重
+      const newFiles = files.filter(f => !batchFiles.value.includes(f));
+      batchFiles.value = [...batchFiles.value, ...newFiles];
+      ElMessage.success(`已添加 ${newFiles.length} 个文件`);
+    }
+  } catch (err: any) {
+    ElMessage.error(`选择文件失败：${err.message ?? err}`);
+  }
+}
+
+function removeBatchFile(index: number): void {
+  batchFiles.value.splice(index, 1);
+}
+
+function clearBatchFiles(): void {
+  batchFiles.value = [];
+  batchReports.value.clear();
+}
+
+function getFileName(filePath: string): string {
+  return filePath.split(/[/\\]/).pop() || filePath;
+}
+
+async function startBatchValidation(): Promise<void> {
+  if (batchFiles.value.length === 0) {
+    ElMessage.warning('请先选择要校验的文件');
+    return;
+  }
+
+  const api = getApi();
+  if (!api?.createValidatorTask || !api?.runValidator) {
+    ElMessage.warning('数据校验功能仅在桌面应用中可用');
+    return;
+  }
+
+  validating.value = true;
+  batchReports.value.clear();
+  batchProgress.value = { current: 0, total: batchFiles.value.length, fileName: '' };
+
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (let i = 0; i < batchFiles.value.length; i++) {
+    const file = batchFiles.value[i];
+    batchProgress.value.current = i + 1;
+    batchProgress.value.fileName = getFileName(file);
+    progressMessage.value = `正在校验 (${i + 1}/${batchFiles.value.length}): ${getFileName(file)}`;
+
+    try {
+      // 创建任务
+      const createRes = await api.createValidatorTask({
+        filePath: file,
+        options: { preset: preset.value },
+      });
+      const currentTaskId = createRes.taskId;
+
+      // 执行校验
+      const runRes = await api.runValidator({
+        taskId: currentTaskId,
+        filePath: file,
+        preset: preset.value,
+      });
+
+      if (runRes.success && runRes.report) {
+        batchReports.value.set(file, runRes.report as ValidationReport);
+        successCount++;
+      } else {
+        errorCount++;
+      }
+    } catch (err: any) {
+      console.error(`校验文件失败: ${file}`, err);
+      errorCount++;
+    }
+  }
+
+  validating.value = false;
+  progressMessage.value = '';
+
+  // 显示汇总结果
+  ElNotification({
+    title: '批量校验完成',
+    message: `共 ${batchFiles.value.length} 个文件，成功 ${successCount} 个，失败 ${errorCount} 个`,
+    type: errorCount > 0 ? 'warning' : 'success',
+    duration: 5000,
+  });
+
+  // 如果有成功的报告，显示第一个
+  if (batchReports.value.size > 0) {
+    const firstReport = batchReports.value.values().next().value;
+    if (firstReport) {
+      report.value = firstReport;
+    }
+  }
+}
+
 async function startValidation(): Promise<void> {
+  // 如果是批量模式，调用批量校验
+  if (batchMode.value) {
+    return startBatchValidation();
+  }
+
   if (!canStart.value) return;
 
   const api = getApi();
@@ -968,6 +1229,94 @@ function loadDemoData() {
   border-radius: 4px;
   font-size: 13px;
   color: #909399;
+}
+
+/* ── 批量文件选择 ── */
+.batch-file-list {
+  margin-bottom: 12px;
+}
+
+.batch-empty {
+  padding: 20px;
+  text-align: center;
+  color: #909399;
+  background: #f5f7fa;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.batch-files {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+}
+
+.batch-file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+}
+
+.batch-file-item:last-child {
+  border-bottom: none;
+}
+
+.batch-file-item .file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.batch-count {
+  font-size: 13px;
+  color: #909399;
+}
+
+/* ── 批量校验结果 ── */
+.batch-result-list {
+  margin-top: 16px;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.batch-result-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.batch-result-item:last-child {
+  border-bottom: none;
+}
+
+.batch-result-item .file-name {
+  flex: 1;
+  font-size: 14px;
+  color: #303133;
+}
+
+.batch-result-item .file-stats {
+  font-size: 12px;
+  color: #909399;
+}
+
+.stat-success .stat-value {
+  color: #67c23a;
 }
 
 /* ── 校验模式选择 ── */

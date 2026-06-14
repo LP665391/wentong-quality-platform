@@ -70,6 +70,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // --- 文件对话框 ---
   selectFile: (options) => ipcRenderer.invoke('dialog:openFile', options),
+  selectMultipleFiles: (options) => ipcRenderer.invoke('dialog:openMultipleFiles', options),
   selectDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
   saveFile: (options) => ipcRenderer.invoke('dialog:saveFile', options),
   writeFile: (params) => ipcRenderer.invoke('file:write', params),

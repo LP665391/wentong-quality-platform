@@ -116,6 +116,22 @@ export function setupIpcHandlers(): void {
   });
 
   /**
+   * 打开多文件选择对话框
+   *
+   * @param _event  - IPC 事件对象
+   * @param options - 对话框选项
+   * @returns 选中的文件路径列表，取消则返回空数组
+   */
+  ipcMain.handle('dialog:openMultipleFiles', async (_event, options?: Electron.OpenDialogOptions) => {
+    const win = getActiveWindow();
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openFile', 'multiSelections'],
+      ...options,
+    });
+    return result.canceled ? [] : result.filePaths;
+  });
+
+  /**
    * 打开目录选择对话框
    *
    * @param _event  - IPC 事件对象
