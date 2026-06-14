@@ -184,6 +184,57 @@ const PRESET_BUILDERS: Record<PresetName, (fields: string[]) => PresetRuleEntry[
   loose: buildLoosePreset,
 };
 
+// ── 档案业务模板 ──────────────────────────────────────
+
+/** 档案模板类型 */
+export type ArchiveTemplate = 'document' | 'accounting' | 'photo' | 'custom';
+
+/** 档案模板配置 */
+export interface ArchiveTemplateConfig {
+  /** 模板名称 */
+  name: string;
+  /** 模板描述 */
+  description: string;
+  /** 必填字段列表 */
+  requiredFields: string[];
+  /** 可选字段列表 */
+  optionalFields: string[];
+  /** 图标 */
+  icon: string;
+}
+
+/** 档案模板配置表 */
+export const ARCHIVE_TEMPLATES: Record<ArchiveTemplate, ArchiveTemplateConfig> = {
+  document: {
+    name: '文书档案',
+    description: '适用于党政机关文书档案，符合 DA/T 22-2022 标准',
+    requiredFields: ['档号', '题名', '责任者', '成文日期', '保管期限'],
+    optionalFields: ['密级', '页数', '载体类型', '附注', '主题词'],
+    icon: '📄',
+  },
+  accounting: {
+    name: '会计档案',
+    description: '适用于会计凭证、账簿、报表等会计档案',
+    requiredFields: ['凭证号', '日期', '金额', '摘要', '会计科目'],
+    optionalFields: ['附件数', '制单人', '审核人', '记账人'],
+    icon: '💰',
+  },
+  photo: {
+    name: '照片档案',
+    description: '适用于数码照片、胶片照片等影像档案',
+    requiredFields: ['照片号', '拍摄时间', '摄影者', '题名'],
+    optionalFields: ['地点', '说明', '尺寸', '载体类型', '保管期限'],
+    icon: '📷',
+  },
+  custom: {
+    name: '自定义',
+    description: '根据文件表头自动识别字段',
+    requiredFields: [],
+    optionalFields: [],
+    icon: '⚙️',
+  },
+};
+
 // ── ValidationEngine ───────────────────────────────────
 
 /**

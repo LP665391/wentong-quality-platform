@@ -50,35 +50,63 @@
         <span class="step-badge">2</span>
         <span>配置规则</span>
       </div>
-      <div class="preset-buttons">
-        <el-button
-          :type="preset === 'loose' ? 'primary' : 'default'"
-          :plain="preset !== 'loose'"
-          @click="preset = 'loose'"
-          :disabled="validating"
-        >
-          <span class="preset-btn-name">宽松模式</span>
-          <span class="preset-btn-desc">收上来就行</span>
-        </el-button>
-        <el-button
-          :type="preset === 'standard' ? 'primary' : 'default'"
-          :plain="preset !== 'standard'"
-          @click="preset = 'standard'"
-          :disabled="validating"
-        >
-          <span class="preset-btn-name">标准模式</span>
-          <span class="preset-btn-desc">符合国标</span>
-        </el-button>
-        <el-button
-          :type="preset === 'strict' ? 'primary' : 'default'"
-          :plain="preset !== 'strict'"
-          @click="preset = 'strict'"
-          :disabled="validating"
-        >
-          <span class="preset-btn-name">严格模式</span>
-          <span class="preset-btn-desc">进馆审查</span>
-        </el-button>
+      
+      <!-- 档案模板选择 -->
+      <div class="template-section">
+        <div class="template-label">档案模板</div>
+        <div class="template-buttons">
+          <el-button
+            v-for="(template, key) in archiveTemplates"
+            :key="key"
+            :type="selectedTemplate === key ? 'primary' : 'default'"
+            :plain="selectedTemplate !== key"
+            @click="selectTemplate(key as ArchiveTemplate)"
+            :disabled="validating"
+            class="template-btn"
+          >
+            <span class="template-icon">{{ template.icon }}</span>
+            <span class="template-name">{{ template.name }}</span>
+          </el-button>
+        </div>
+        <div v-if="selectedTemplate !== 'custom'" class="template-desc">
+          {{ archiveTemplates[selectedTemplate].description }}
+        </div>
       </div>
+
+      <!-- 校验模式选择 -->
+      <div class="preset-section">
+        <div class="preset-label">校验模式</div>
+        <div class="preset-buttons">
+          <el-button
+            :type="preset === 'loose' ? 'primary' : 'default'"
+            :plain="preset !== 'loose'"
+            @click="preset = 'loose'"
+            :disabled="validating"
+          >
+            <span class="preset-btn-name">宽松模式</span>
+            <span class="preset-btn-desc">收上来就行</span>
+          </el-button>
+          <el-button
+            :type="preset === 'standard' ? 'primary' : 'default'"
+            :plain="preset !== 'standard'"
+            @click="preset = 'standard'"
+            :disabled="validating"
+          >
+            <span class="preset-btn-name">标准模式</span>
+            <span class="preset-btn-desc">符合国标</span>
+          </el-button>
+          <el-button
+            :type="preset === 'strict' ? 'primary' : 'default'"
+            :plain="preset !== 'strict'"
+            @click="preset = 'strict'"
+            :disabled="validating"
+          >
+            <span class="preset-btn-name">严格模式</span>
+            <span class="preset-btn-desc">进馆审查</span>
+          </el-button>
+        </div>
+      </div>
+
       <!-- 智能推荐提示 -->
       <div v-if="recommendedPreset && recommendedPreset !== preset" class="recommend-tip">
         <el-icon><InfoFilled /></el-icon>
@@ -334,6 +362,17 @@ import { type ComparisonData } from '@/utils/demo-scenarios';
 // Types
 // ---------------------------------------------------------------------------
 
+// 档案模板类型
+type ArchiveTemplate = 'document' | 'accounting' | 'photo' | 'custom';
+
+interface ArchiveTemplateConfig {
+  name: string;
+  description: string;
+  requiredFields: string[];
+  optionalFields: string[];
+  icon: string;
+}
+
 interface ValidationProgress {
   current: number;
   total: number;
@@ -394,6 +433,54 @@ const appStore = useAppStore();
 // 分页相关
 const currentPage = ref(1);
 const pageSize = ref(10);
+
+// 档案模板相关
+const selectedTemplate = ref<ArchiveTemplate>('document');
+
+// 档案模板配置
+const archiveTemplates: Record<ArchiveTemplate, ArchiveTemplateConfig> = {
+  document: {
+    name: '文书档案',
+    description: '适用于党政机关文书档案，符合 DA/T 22-2022 标准',
+    requiredFields: ['档号', '题名', '责任者', '成文日期', '保管期限'],
+    optionalFields: ['密级', '页数', '载体类型', '附注', '主题词'],
+    icon: '📄',
+  },
+  accounting: {
+    name: '会计档案',
+    description: '适用于会计凭证、账簿、报表等会计档案',
+    requiredFields: ['凭证号', '日期', '金额', '摘要', '会计科目'],
+    optionalFields: ['附件数', '制单人', '审核人', '记账人'],
+    icon: '💰',
+  },
+  photo: {
+    name: '照片档案',
+    description: '适用于数码照片、胶片照片等影像档案',
+    requiredFields: ['照片号', '拍摄时间', '摄影者', '题名'],
+    optionalFields: ['地点', '说明', '尺寸', '载体类型', '保管期限'],
+    icon: '📷',
+  },
+  custom: {
+    name: '自定义',
+    description: '根据文件表头自动识别字段',
+    requiredFields: [],
+    optionalFields: [],
+    icon: '⚙️',
+  },
+};
+
+// 选择模板
+function selectTemplate(template: ArchiveTemplate) {
+  selectedTemplate.value = template;
+  // 根据模板自动推荐校验模式
+  if (template === 'document') {
+    preset.value = 'standard';
+  } else if (template === 'accounting') {
+    preset.value = 'strict';
+  } else if (template === 'photo') {
+    preset.value = 'standard';
+  }
+}
 
 // 错误类型中文标签映射
 const errorTypeLabels: Record<string, string> = {
@@ -838,6 +925,61 @@ function loadDemoData() {
   color: #909399;
   line-height: 1.4;
   margin-top: 2px;
+}
+
+/* ── 档案模板选择 ── */
+.template-section {
+  margin-bottom: 20px;
+}
+
+.template-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #606266;
+  margin-bottom: 10px;
+}
+
+.template-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.template-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  min-width: 120px;
+}
+
+.template-icon {
+  font-size: 18px;
+}
+
+.template-name {
+  font-size: 14px;
+}
+
+.template-desc {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #909399;
+}
+
+/* ── 校验模式选择 ── */
+.preset-section {
+  margin-bottom: 16px;
+}
+
+.preset-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #606266;
+  margin-bottom: 10px;
 }
 
 .recommend-tip {
