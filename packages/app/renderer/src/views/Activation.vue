@@ -535,13 +535,15 @@ function showPurchaseDialog() {
 
 .activation-header h1 {
   font-size: 24px;
-  color: var(--el-text-color-primary);
+  font-weight: 400;
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 .subtitle {
-  color: var(--el-text-color-secondary);
+  color: var(--text-secondary);
   font-size: 14px;
+  font-weight: 300;
 }
 
 .activation-steps {
@@ -552,7 +554,7 @@ function showPurchaseDialog() {
   margin-top: 24px;
 }
 
-/* 选择激活方式卡片 */
+/* 选择激活方式卡片 — Stripe 风格 */
 .activation-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -562,25 +564,42 @@ function showPurchaseDialog() {
 
 .activation-card {
   cursor: pointer;
-  transition: all 0.2s;
-  border: 2px solid transparent;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.activation-card :deep(.el-card__body) {
+  padding: 20px;
 }
 
 .activation-card:hover {
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(83, 58, 253, 0.2);
 }
 
 .activation-card.selected {
-  border-color: var(--el-color-primary);
-  background-color: var(--el-color-primary-light-9);
+  border-color: var(--color-primary);
+  background-color: rgba(83, 58, 253, 0.04);
+  box-shadow: 0 0 0 2px rgba(83, 58, 253, 0.1);
 }
 
 .card-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
+  font-weight: 400;
   font-size: 16px;
+  color: var(--text-primary);
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.card-header :deep(.el-icon) {
+  color: var(--color-primary);
+  font-size: 24px;
 }
 
 /* 机器码 */
