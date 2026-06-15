@@ -137,7 +137,7 @@ export class PdfEncryptor {
     });
 
     // 操作提示
-    page.drawText('请在 Ai质检平台 中使用「解密」功能输入密码后还原查看', {
+    page.drawText('请在 Ai 质检系统 中使用「解密」功能输入密码后还原查看', {
       x: 80, y: 540, size: 14, font,
       color: rgb(0.4, 0.4, 0.4),
     });

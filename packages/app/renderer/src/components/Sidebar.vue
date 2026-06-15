@@ -29,7 +29,7 @@
         <path d="M29 34L31 36L35 32" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <transition name="fade">
-        <span v-if="!sidebarCollapsed" class="sidebar__logo-text">Ai质检</span>
+        <span v-if="!sidebarCollapsed" class="sidebar__logo-text">Ai 质检系统</span>
       </transition>
     </div>
 

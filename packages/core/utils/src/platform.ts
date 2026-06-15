@@ -50,7 +50,7 @@ export function getPlatformInfo(): PlatformInfo {
  * 获取应用名称
  */
 export function getAppName(): string {
-  return 'Ai质检平台';
+  return 'Ai 质检系统';
 }
 
 /**

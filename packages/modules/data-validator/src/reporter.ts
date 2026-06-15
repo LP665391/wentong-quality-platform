@@ -44,7 +44,7 @@ export class Reporter {
     outputPath: string,
   ): Promise<void> {
     const workbook = new Workbook();
-    workbook.creator = 'Ai质检平台';
+    workbook.creator = 'Ai 质检系统';
 
     // ── Sheet 1: 校验摘要 ──────────────────────────────
     const summarySheet = workbook.addWorksheet('校验摘要');

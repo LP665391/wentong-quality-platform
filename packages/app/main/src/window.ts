@@ -24,7 +24,7 @@ const MIN_WIDTH = 1024;
 const MIN_HEIGHT = 680;
 
 /** 窗口标题 */
-const WINDOW_TITLE = 'Ai质检平台';
+const WINDOW_TITLE = 'Ai 质检系统';
 
 /** Vite 开发服务器地址 */
 const DEV_SERVER_URL = 'http://localhost:5173';

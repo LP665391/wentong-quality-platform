@@ -30,7 +30,7 @@ export const DEMO_SCENARIOS: DemoScreen[] = [
     icon: '📋',
     route: '/validator',
     description:
-      '供应商每次发货附带 Excel 质检报告，人工核对 50 行数据需要 20 分钟，漏检率 10%。用 Ai质检平台 3 分钟完成，零遗漏。',
+      '供应商每次发货附带 Excel 质检报告，人工核对 50 行数据需要 20 分钟，漏检率 10%。用 Ai 质检系统 3 分钟完成，零遗漏。',
   },
   {
     id: 'image-screening',
@@ -39,7 +39,7 @@ export const DEMO_SCENARIOS: DemoScreen[] = [
     icon: '🖼️',
     route: '/image-detector',
     description:
-      '电商产品图片需要逐一检查清晰度和尺寸，100 张图片耗时 2 小时。用 Ai质检平台 10 秒完成，不合格图片自动标红。',
+      '电商产品图片需要逐一检查清晰度和尺寸，100 张图片耗时 2 小时。用 Ai 质检系统 10 秒完成，不合格图片自动标红。',
   },
   {
     id: 'doc-archive',
@@ -48,12 +48,12 @@ export const DEMO_SCENARIOS: DemoScreen[] = [
     icon: '🔐',
     route: '/pdf-processor',
     description:
-      '质检完成后需要生成 PDF 报告、加水印、加密归档。传统方式需要切换多个工具。用 Ai质检平台一键完成从校验到归档的全流程。',
+      '质检完成后需要生成 PDF 报告、加水印、加密归档。传统方式需要切换多个工具。用 Ai 质检系统一键完成从校验到归档的全流程。',
   },
 ];
 
 // ---------------------------------------------------------------------------
-// 对比数据（人工 vs Ai质检平台）
+// 对比数据（人工 vs Ai 质检系统）
 // ---------------------------------------------------------------------------
 
 export interface ComparisonData {

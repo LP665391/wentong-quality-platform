@@ -2,7 +2,7 @@
   "name": "wentong-quality-platform",
   "version": "1.0.0",
   "private": true,
-  "description": "Ai质检平台 - 跨平台桌面数据质量管理工具",
+  "description": "Ai 质检系统 - 跨平台桌面数据质量管理工具",
   "author": "WenTong",
   "license": "Proprietary",
   "scripts": {

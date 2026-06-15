@@ -450,7 +450,7 @@
           </table>
         </div>
         <div class="preview-footer">
-          Ai质检平台生成 · {{ new Date().toLocaleDateString('zh-CN') }} · 页脚含防伪水印
+          Ai 质检系统生成 · {{ new Date().toLocaleDateString('zh-CN') }} · 页脚含防伪水印
         </div>
         <div style="text-align: center; margin-top: 16px">
           <el-button type="primary" @click="showReportPreview = false">关闭预览</el-button>

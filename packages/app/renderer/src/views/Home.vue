@@ -22,8 +22,8 @@
           <span class="particle particle--5"></span>
         </div>
         <div class="welcome-text">
-          <div class="welcome-company">文通质检</div>
-          <h1 class="welcome-title">AI 智能质检平台</h1>
+          <div class="welcome-company">Ai 质检系统</div>
+          <h1 class="welcome-title">Ai 质检系统</h1>
           <p class="welcome-subtitle">多维度自动化质量检测，为您的数据保驾护航</p>
           <p class="welcome-date">{{ currentDate }}</p>
         </div>
@@ -63,7 +63,7 @@
     <!-- 典型场景入口（仅浏览器演示） -->
     <section v-if="isBrowser" class="home-scenarios">
       <h2 class="section-title">⚡ 典型场景</h2>
-      <p class="section-subtitle">点击直接进入演示，了解 Ai质检平台如何解决实际问题</p>
+      <p class="section-subtitle">点击直接进入演示，了解 Ai 质检系统如何解决实际问题</p>
       <div class="scenario-grid">
         <div
           v-for="(scene, idx) in DEMO_SCENARIOS"

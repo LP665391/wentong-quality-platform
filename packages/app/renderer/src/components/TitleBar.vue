@@ -1,6 +1,6 @@
 <template>
   <header class="titlebar drag-region">
-    <span class="titlebar__title">Ai质检平台</span>
+    <span class="titlebar__title">Ai 质检系统</span>
   </header>
 </template>
 

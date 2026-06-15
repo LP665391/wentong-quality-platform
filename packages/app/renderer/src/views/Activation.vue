@@ -1,7 +1,7 @@
 <template>
   <div class="activation-page">
     <div class="activation-header">
-      <h1>Ai质检平台 — 软件授权激活</h1>
+      <h1>Ai 质检系统 — 软件授权激活</h1>
       <p class="subtitle">连云港文安档案科技有限公司</p>
       <p class="subtitle" style="font-size:13px;color:#8c8c8c;margin-top:4px;">请选择激活方式以开始使用</p>
     </div>
