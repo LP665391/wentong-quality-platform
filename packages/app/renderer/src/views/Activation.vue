@@ -140,8 +140,29 @@
           <el-divider />
 
           <div class="offline-section">
-            <h4>2. 导入许可证文件</h4>
-            <p>选择从管理员处获取的 .dat 许可证文件。</p>
+            <h4>2. 导入许可证</h4>
+            <p style="margin-bottom: 12px;">选择 .dat 文件，或直接粘贴许可证内容。</p>
+
+            <!-- 粘贴方式 -->
+            <div class="paste-section">
+              <el-input
+                v-model="pasteContent"
+                type="textarea"
+                :rows="4"
+                placeholder="将管理员发给您的许可证内容（JSON文本）直接粘贴到这里..."
+                clearable
+                @input="onPasteInput"
+              />
+              <p class="paste-hint" v-if="pasteContent">
+                <span class="paste-status">✓ 已读取许可证内容</span>
+              </p>
+            </div>
+
+            <el-divider style="margin: 8px 0;">
+              <span style="font-size: 12px; color: #94a3b8;">或</span>
+            </el-divider>
+
+            <!-- 文件上传方式 -->
             <div class="file-upload-area">
               <el-upload
                 drag
@@ -152,7 +173,7 @@
               >
                 <el-icon :size="40"><UploadFilled /></el-icon>
                 <div class="el-upload__text">
-                  将许可证文件拖到此处，或<em>点击浏览</em>
+                  将 .dat 许可证文件拖到此处，或<em>点击浏览</em>
                 </div>
               </el-upload>
             </div>
@@ -162,7 +183,7 @@
             <el-button
               type="primary"
               :loading="activatingOffline"
-              :disabled="!selectedFile"
+              :disabled="!selectedFile && !pasteContent"
               @click="handleActivateOffline"
             >
               导入并激活
@@ -321,6 +342,7 @@ const machineId = ref('');
 const licenseInfo = ref<any>(null);
 const isAlreadyActivated = ref(false);
 const selectedFile = ref<File | null>(null);
+const pasteContent = ref('');
 const trialRemainingDays = ref(7);
 const trialTotalDays = 7;
 let trialTimer: ReturnType<typeof setInterval> | null = null;
@@ -407,6 +429,13 @@ function copyMachineId() {
 
 function handleFileChange(file: any) {
   selectedFile.value = file.raw;
+  pasteContent.value = '';
+}
+
+function onPasteInput() {
+  if (pasteContent.value) {
+    selectedFile.value = null;
+  }
 }
 
 async function handleActivateOnline() {
@@ -417,7 +446,6 @@ async function handleActivateOnline() {
 
   activatingOnline.value = true;
   try {
-    // 调用主进程 IPC
     const result: any = await window.api?.invoke?.('auth:activate', {
       method: 'online',
       licenseKey: onlineForm.value.licenseKey,
@@ -441,16 +469,19 @@ async function handleActivateOnline() {
 }
 
 async function handleActivateOffline() {
-  if (!selectedFile.value) {
-    ElMessage.warning('请选择许可证文件');
+  let fileContent: string | null = null;
+  if (pasteContent.value.trim()) {
+    fileContent = pasteContent.value.trim();
+  } else if (selectedFile.value) {
+    fileContent = await selectedFile.value.text();
+  }
+  if (!fileContent) {
+    ElMessage.warning('请粘贴许可证内容或选择许可证文件');
     return;
   }
 
   activatingOffline.value = true;
   try {
-    // 读取文件内容并通过 IPC 发送
-    const fileContent = await selectedFile.value.text();
-
     const result: any = await window.api?.invoke?.('auth:activate', {
       method: 'offline',
       fileContent,
@@ -624,6 +655,35 @@ function showPurchaseDialog() {
 /* 文件上传 */
 .file-upload-area {
   margin-top: 12px;
+}
+
+/* 粘贴输入区域 */
+.paste-section {
+  margin-bottom: 4px;
+}
+
+.paste-section :deep(.el-textarea__inner) {
+  font-family: 'SF Mono', 'Fira Code', 'Source Sans 3', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  border-radius: 6px;
+  border-color: var(--border-color);
+  transition: border-color var(--transition-fast);
+}
+
+.paste-section :deep(.el-textarea__inner:focus) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(83, 58, 253, 0.1);
+}
+
+.paste-hint {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.paste-status {
+  color: var(--color-success);
+  font-weight: 400;
 }
 
 /* 试用信息 */
