@@ -78,10 +78,11 @@ function navigate(path: string): void {
 </script>
 
 <style scoped>
+/* Stripe 风格侧边栏 */
 .sidebar {
   width: var(--sidebar-width);
-  background: #001529;
-  color: var(--text-inverse);
+  background: var(--bg-sidebar);
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -89,6 +90,7 @@ function navigate(path: string): void {
   overflow: hidden;
   z-index: var(--z-sidebar);
   user-select: none;
+  border-right: 1px solid var(--border-color);
 }
 
 .sidebar--collapsed {
@@ -103,6 +105,7 @@ function navigate(path: string): void {
   padding: 0 16px;
   gap: 10px;
   flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color-light);
 }
 
 .sidebar--collapsed .sidebar__logo {
@@ -116,10 +119,12 @@ function navigate(path: string): void {
 }
 
 .sidebar__logo-text {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--color-primary);
   white-space: nowrap;
   overflow: hidden;
+  letter-spacing: -0.4px;
 }
 
 /* ---- 导航 ---- */
@@ -127,7 +132,7 @@ function navigate(path: string): void {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 8px 0;
+  padding: 12px 0;
   gap: 2px;
   overflow-y: auto;
 }
@@ -135,14 +140,16 @@ function navigate(path: string): void {
 .sidebar__nav-item {
   display: flex;
   align-items: center;
-  height: 44px;
+  height: 40px;
   padding: 0 16px;
   gap: 10px;
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
-  color: rgba(255, 255, 255, 0.65);
+  transition: all var(--transition-fast);
+  color: var(--text-secondary);
   text-decoration: none;
   white-space: nowrap;
+  border-left: 3px solid transparent;
+  font-weight: 300;
 }
 
 .sidebar--collapsed .sidebar__nav-item {
@@ -151,17 +158,19 @@ function navigate(path: string): void {
 }
 
 .sidebar__nav-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--bg-hover);
+  color: var(--color-primary);
 }
 
 .sidebar__nav-item--active {
-  background: #1677ff;
-  color: #fff;
+  background: rgba(83, 58, 253, 0.06);
+  color: var(--color-primary);
+  border-left: 3px solid var(--color-primary);
+  font-weight: 400;
 }
 
 .sidebar__nav-item--active:hover {
-  background: #1677ff;
+  background: rgba(83, 58, 253, 0.08);
 }
 
 .sidebar__nav-icon {
@@ -184,19 +193,19 @@ function navigate(path: string): void {
 
 .sidebar__divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-color-light);
   margin: 0 12px 4px;
 }
 
 .sidebar__toggle {
   display: flex;
   align-items: center;
-  height: 44px;
+  height: 40px;
   padding: 0 16px;
   gap: 10px;
   cursor: pointer;
-  transition: background var(--transition-fast);
-  color: rgba(255, 255, 255, 0.45);
+  transition: all var(--transition-fast);
+  color: var(--text-placeholder);
 }
 
 .sidebar--collapsed .sidebar__toggle {
@@ -205,18 +214,19 @@ function navigate(path: string): void {
 }
 
 .sidebar__toggle:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 .sidebar__toggle-icon {
-  font-size: 14px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
 .sidebar__toggle-text {
   font-size: 13px;
   white-space: nowrap;
+  font-weight: 300;
 }
 
 /* ---- 过渡动画（文字淡入淡出） ---- */

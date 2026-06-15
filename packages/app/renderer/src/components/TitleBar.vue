@@ -7,7 +7,7 @@
 <script setup lang="ts">
 // macOS 自定义标题栏
 // - 居中显示应用标题
-// - 毛玻璃效果背景（backdrop-filter）
+// - 白色背景 + 底部细边框
 // - 固定定位在顶部
 // - drag-region 允许拖拽窗口
 </script>
@@ -25,20 +25,18 @@
   z-index: var(--z-titlebar);
   flex-shrink: 0;
 
-  /* 毛玻璃效果 */
-  background: rgba(43, 45, 58, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  /* Stripe 风格 — 白色背景 */
+  background: var(--bg-titlebar);
 
   /* 底部边框 */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .titlebar__title {
   font-size: 13px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
-  letter-spacing: 0.5px;
+  font-weight: 400;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
   user-select: none;
 }
 </style>

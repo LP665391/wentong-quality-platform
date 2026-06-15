@@ -59,7 +59,7 @@ import { useTaskStore } from '@/stores/task';
 const appStore = useAppStore();
 const taskStore = useTaskStore();
 
-/** 仅在浏览器中显示演示指示器 */
+/** 仅在浏览器中显示演示模式 */
 const isBrowser = computed(() => !(window as any).electronAPI && !(window as any).api);
 
 // ---------------------------------------------------------------------------
@@ -105,6 +105,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   gap: 16px;
   user-select: none;
+  font-weight: 300;
 }
 
 /* ---- 左 / 中 / 右 容器 ---- */
@@ -138,23 +139,23 @@ onUnmounted(() => {
   margin: 0 2px;
 }
 
-/* ---- 授权指示灯 ---- */
+/* ---- 授权指示灯 — Stripe 绿色 ---- */
 .status-indicator {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #c0c4cc;
+  background: var(--text-placeholder);
   flex-shrink: 0;
 }
 
 .status-indicator--active {
-  background: #67c23a;
-  box-shadow: 0 0 4px rgba(103, 194, 58, 0.5);
+  background: var(--color-success);
+  box-shadow: 0 0 4px rgba(16, 185, 129, 0.4);
 }
 
 .status-indicator--demo {
-  background: #e6a23c;
-  box-shadow: 0 0 4px rgba(230, 162, 60, 0.5);
+  background: var(--color-warning);
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.4);
   animation: demo-pulse 2s ease-in-out infinite;
 }
 
@@ -168,10 +169,10 @@ onUnmounted(() => {
   color: var(--text-placeholder);
 }
 
-/* ---- 任务徽章 ---- */
+/* ---- 任务徽章 — Stripe 紫色 ---- */
 .statusbar__task-badge {
   color: var(--color-primary);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 /* ---- 公司信息 ---- */
@@ -182,7 +183,7 @@ onUnmounted(() => {
 
 .statusbar__phone,
 .statusbar__chairman {
-  color: var(--text-hint);
+  color: var(--text-placeholder);
   font-size: 11px;
 }
 

@@ -1,10 +1,10 @@
 /* ==========================================================================
    全局布局样式 — 文通Ai质检平台
-   Plan-2 步骤 1：全局布局 CSS 变量、重置、工具类
+   Stripe 风格设计系统
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   CSS 变量
+   CSS 变量 — Stripe Design System
    -------------------------------------------------------------------------- */
 :root {
   /* ---- 布局尺寸 ---- */
@@ -13,39 +13,39 @@
   --titlebar-height: 38px;
   --statusbar-height: 28px;
 
-  /* ---- 主题色 ---- */
-  --color-primary: #409eff;
-  --color-primary-light: #66b1ff;
-  --color-primary-dark: #3a8ee6;
-  --color-success: #67c23a;
-  --color-warning: #e6a23c;
-  --color-danger: #f56c6c;
-  --color-info: #909399;
+  /* ---- Stripe 主色 ---- */
+  --color-primary: #533afd;
+  --color-primary-light: #7c6bff;
+  --color-primary-dark: #4434d4;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #64748d;
 
-  /* ---- 中性色 ---- */
-  --bg-base: #f5f7fa;
-  --bg-sidebar: #1d1e2c;
-  --bg-titlebar: #2b2d3a;
-  --bg-statusbar: #f0f2f5;
+  /* ---- 中性色 — Stripe ---- */
+  --bg-base: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-titlebar: #ffffff;
+  --bg-statusbar: #ffffff;
   --bg-card: #ffffff;
-  --bg-hover: #f0f2f5;
+  --bg-hover: #f8fafc;
 
-  /* ---- 边框 ---- */
-  --border-color: #e4e7ed;
-  --border-color-light: #ebeef5;
+  /* ---- 边框 — Stripe ---- */
+  --border-color: #e5edf5;
+  --border-color-light: #f1f5f9;
   --border-radius: 8px;
   --border-radius-sm: 4px;
 
-  /* ---- 阴影 ---- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+  /* ---- 阴影 — Stripe ---- */
+  --shadow-sm: rgba(0, 0, 0, 0.04) 0px 2px 4px;
+  --shadow-md: rgba(50, 50, 93, 0.15) 0px 4px 8px -4px;
+  --shadow-lg: rgba(50, 50, 93, 0.25) 0px 6px 12px -4px;
 
-  /* ---- 文字 ---- */
-  --text-primary: #303133;
-  --text-regular: #606266;
-  --text-secondary: #909399;
-  --text-placeholder: #c0c4cc;
+  /* ---- 文字 — Stripe ---- */
+  --text-primary: #061b31;
+  --text-regular: #273951;
+  --text-secondary: #64748d;
+  --text-placeholder: #94a3b8;
   --text-inverse: #ffffff;
 
   /* ---- 过渡 ---- */
@@ -77,16 +77,17 @@ body,
   height: 100%;
   width: 100%;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
+  font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
     'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--bg-base);
   color: var(--text-primary);
+  font-weight: 300;
 }
 
 /* --------------------------------------------------------------------------
-   滚动条样式
+   滚动条样式 — Stripe
    -------------------------------------------------------------------------- */
 ::-webkit-scrollbar {
   width: 6px;
@@ -98,12 +99,12 @@ body,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(144, 147, 153, 0.3);
+  background: rgba(100, 116, 139, 0.2);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(144, 147, 153, 0.5);
+  background: rgba(100, 116, 139, 0.4);
 }
 
 /* --------------------------------------------------------------------------
@@ -119,14 +120,14 @@ body,
 }
 
 /* --------------------------------------------------------------------------
-   wt-card 通用卡片样式
+   wt-card 通用卡片样式 — Stripe
    -------------------------------------------------------------------------- */
 .wt-card {
   background: var(--bg-card);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-sm);
   padding: 16px;
-  border: 1px solid var(--border-color-light);
+  border: 1px solid var(--border-color);
   transition: box-shadow var(--transition-fast);
 }
 
@@ -185,7 +186,7 @@ body,
   min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px;
+  padding: 24px;
   background: var(--bg-base);
 }
 

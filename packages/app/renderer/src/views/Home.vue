@@ -349,8 +349,8 @@ function statusLabel(status: TaskStatus): string {
 
 <style scoped>
 /* ==================================================================
-   Home — 增强视觉冲击力设计
-   主题：深蓝 + 紫 + 青色渐变
+   Home — Stripe 风格设计
+   主题：白底 + 紫色点缀 + 轻盈优雅
    ================================================================== */
 
 .home {
@@ -360,78 +360,24 @@ function statusLabel(status: TaskStatus): string {
 }
 
 /* ==================================================================
-   Animations
-   ================================================================== */
-
-@keyframes gradientShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.3; }
-  50%      { transform: translateY(-18px) rotate(6deg); opacity: 0.6; }
-}
-
-@keyframes floatReverse {
-  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.25; }
-  50%      { transform: translateY(14px) rotate(-5deg); opacity: 0.55; }
-}
-
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50%      { opacity: 0.7; transform: scale(1.15); }
-}
-
-@keyframes shimmer {
-  0%   { left: -100%; }
-  100% { left: 200%; }
-}
-
-@keyframes particleDrift {
-  0%   { transform: translate(0, 0); opacity: 0; }
-  20%  { opacity: 1; }
-  80%  { opacity: 1; }
-  100% { transform: translate(40px, -60px); opacity: 0; }
-}
-
-@keyframes borderGlow {
-  0%, 100% { border-color: rgba(99, 102, 241, 0.3); }
-  50%      { border-color: rgba(99, 102, 241, 0.8); }
-}
-
-@keyframes countUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ==================================================================
-   Welcome Banner
+   Welcome Banner — Stripe 风格
    ================================================================== */
 
 .home-welcome {
   margin-bottom: 32px;
-  perspective: 1000px;
 }
 
 .welcome-content {
   position: relative;
-  background: linear-gradient(135deg, #0f0c29, #1a1a3e 25%, #1e2a4a 50%, #0d1b3e 75%, #0f0c29);
-  background-size: 400% 400%;
-  animation: gradientShift 12s ease infinite;
-  border-radius: 20px;
-  padding: 48px 44px;
+  background: linear-gradient(135deg, #1c1e54 0%, #061b31 100%);
+  border-radius: 12px;
+  padding: 40px 44px;
   color: #fff;
   overflow: hidden;
-  box-shadow:
-    0 8px 40px rgba(15, 12, 41, 0.5),
-    0 0 120px rgba(99, 102, 241, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 10px 30px -10px;
 }
 
-/* 光晕效果 */
+/* 紫色光晕装饰 */
 .welcome-glow {
   position: absolute;
   border-radius: 50%;
@@ -441,102 +387,25 @@ function statusLabel(status: TaskStatus): string {
 
 .welcome-glow--1 {
   width: 280px; height: 280px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.35), transparent);
+  background: radial-gradient(circle, rgba(83, 58, 253, 0.3), transparent);
   top: -80px; right: -40px;
-  animation: pulseGlow 6s ease-in-out infinite;
 }
 
 .welcome-glow--2 {
   width: 220px; height: 220px;
-  background: radial-gradient(circle, rgba(34, 211, 238, 0.3), transparent);
+  background: radial-gradient(circle, rgba(234, 34, 97, 0.15), transparent);
   bottom: -60px; left: -30px;
-  animation: pulseGlow 8s ease-in-out 1s infinite;
 }
 
 .welcome-glow--3 {
-  width: 180px; height: 180px;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.3), transparent);
-  top: 50%; left: 60%;
-  animation: pulseGlow 7s ease-in-out 2s infinite;
+  display: none;
 }
 
-/* 浮动圆点 */
-.welcome-orb {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.welcome-orb--1 {
-  width: 12px; height: 12px;
-  background: rgba(99, 102, 241, 0.6);
-  top: 18%; right: 22%;
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.5);
-  animation: float 5s ease-in-out infinite;
-}
-
-.welcome-orb--2 {
-  width: 8px; height: 8px;
-  background: rgba(34, 211, 238, 0.7);
-  top: 62%; right: 12%;
-  box-shadow: 0 0 12px rgba(34, 211, 238, 0.5);
-  animation: floatReverse 6s ease-in-out 0.8s infinite;
-}
-
-.welcome-orb--3 {
-  width: 10px; height: 10px;
-  background: rgba(168, 85, 247, 0.7);
-  top: 28%; right: 48%;
-  box-shadow: 0 0 14px rgba(168, 85, 247, 0.5);
-  animation: float 7s ease-in-out 1.5s infinite;
-}
-
-.welcome-orb--4 {
-  width: 6px; height: 6px;
-  background: rgba(99, 102, 241, 0.5);
-  top: 75%; right: 32%;
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
-  animation: floatReverse 5.5s ease-in-out 0.3s infinite;
-}
-
-.welcome-orb--5 {
-  width: 14px; height: 14px;
-  background: rgba(34, 211, 238, 0.5);
-  top: 8%; right: 8%;
-  box-shadow: 0 0 18px rgba(34, 211, 238, 0.4);
-  animation: float 8s ease-in-out 2.2s infinite;
-}
-
-.welcome-orb--6 {
-  width: 7px; height: 7px;
-  background: rgba(168, 85, 247, 0.6);
-  top: 45%; right: 68%;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
-  animation: floatReverse 4.5s ease-in-out 3s infinite;
-}
-
-/* 粒子线条 */
+/* 隐藏深色主题的浮动元素 */
+.welcome-orb,
 .welcome-particles {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
+  display: none;
 }
-
-.particle {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 50%;
-  animation: particleDrift 4s ease-in-out infinite;
-}
-
-.particle--1 { top: 30%; left: 10%; animation-delay: 0s; }
-.particle--2 { top: 60%; left: 25%; animation-delay: 1.2s; }
-.particle--3 { top: 45%; left: 40%; animation-delay: 2.4s; }
-.particle--4 { top: 20%; left: 55%; animation-delay: 0.6s; }
-.particle--5 { top: 70%; left: 70%; animation-delay: 3s; }
 
 /* 文字内容 */
 .welcome-text {
@@ -544,133 +413,102 @@ function statusLabel(status: TaskStatus): string {
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .welcome-company {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgba(34, 211, 238, 0.85);
+  color: rgba(255, 255, 255, 0.6);
   margin-bottom: 4px;
 }
 
 .welcome-title {
-  font-size: 38px;
-  font-weight: 800;
+  font-size: 32px;
+  font-weight: 300;
   color: #fff;
-  letter-spacing: 2px;
-  line-height: 1.2;
+  letter-spacing: -0.64px;
+  line-height: 1.1;
   margin: 0;
-  background: linear-gradient(135deg, #fff 30%, #a5b4fc 60%, #67e8f9 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .welcome-subtitle {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.65);
+  font-size: 16px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.7);
   margin: 4px 0 0;
-  letter-spacing: 0.5px;
+  line-height: 1.4;
 }
 
 .welcome-date {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
-  margin-top: 8px;
-  letter-spacing: 0.5px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 12px;
 }
 
 /* ==================================================================
-   Section Titles
+   Section Titles — Stripe
    ================================================================== */
 
 .section-title {
   font-size: 20px;
-  font-weight: 700;
-  color: #e2e8f0;
+  font-weight: 400;
+  color: var(--text-primary);
   margin-bottom: 6px;
   padding-left: 4px;
-  letter-spacing: 0.5px;
+  letter-spacing: -0.2px;
 }
 
 .section-subtitle {
-  font-size: 13px;
-  color: #64748b;
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--text-secondary);
   margin-bottom: 20px;
   padding-left: 4px;
 }
 
 /* ==================================================================
-   Stats Panel — 玻璃态
+   Stats Panel — Stripe 卡片风格
    ================================================================== */
 
 .home-stats {
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 16px;
 }
 
 .stat-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 16px;
-  padding: 24px 28px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 20px 24px;
   display: flex;
   align-items: center;
-  gap: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1.2);
-  cursor: default;
+  gap: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast);
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.3),
-    0 0 40px rgba(99, 102, 241, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
-/* 微光边框 */
 .stat-card__glow {
-  position: absolute;
-  inset: -1px;
-  border-radius: 16px;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent 60%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-.stat-card--blue .stat-card__glow {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), transparent 60%);
-}
-
-.stat-card--purple .stat-card__glow {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.5), transparent 60%);
-}
-
-.stat-card--cyan .stat-card__glow {
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.5), transparent 60%);
+  display: none;
 }
 
 .stat-card__icon {
-  font-size: 42px;
+  font-size: 36px;
   line-height: 1;
   flex-shrink: 0;
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.1));
 }
 
 .stat-card__body {
@@ -679,67 +517,58 @@ function statusLabel(status: TaskStatus): string {
 }
 
 .stat-card__number {
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: -0.56px;
   line-height: 1.1;
-  animation: countUp 0.5s ease-out both;
+  color: var(--color-primary);
 }
 
 .stat-card__number--blue {
-  background: linear-gradient(135deg, #818cf8, #6366f1);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-primary);
 }
 
 .stat-card__number--purple {
-  background: linear-gradient(135deg, #c084fc, #a855f7);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #8b5cf6;
 }
 
 .stat-card__number--cyan {
-  background: linear-gradient(135deg, #67e8f9, #22d3ee);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-success);
 }
 
 .stat-card__label {
   font-size: 13px;
-  color: #64748b;
+  font-weight: 300;
+  color: var(--text-secondary);
   margin-top: 4px;
-  letter-spacing: 0.3px;
 }
 
 /* ==================================================================
-   Scenarios — 彩色左边框
+   Scenarios — Stripe 风格
    ================================================================== */
 
 .home-scenarios {
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .scenario-grid {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .scenario-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 14px;
-  padding: 22px 28px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 20px 24px;
   display: flex;
   align-items: center;
-  gap: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 20px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  overflow: hidden;
-  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+  transition: all var(--transition-fast);
 }
 
 .scenario-card__bar {
@@ -747,50 +576,35 @@ function statusLabel(status: TaskStatus): string {
   left: 0;
   top: 12px;
   bottom: 12px;
-  width: 4px;
-  border-radius: 0 4px 4px 0;
-  transition: all 0.35s ease;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  transition: all var(--transition-fast);
 }
 
-/* 不同颜色 */
 .scenario-card--color1 .scenario-card__bar {
-  background: linear-gradient(180deg, #6366f1, #818cf8);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+  background: var(--color-primary);
 }
 
 .scenario-card--color2 .scenario-card__bar {
-  background: linear-gradient(180deg, #10b981, #34d399);
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+  background: var(--color-success);
 }
 
 .scenario-card--color3 .scenario-card__bar {
-  background: linear-gradient(180deg, #a855f7, #c084fc);
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);
+  background: #8b5cf6;
 }
 
 .scenario-card:hover {
-  transform: translateX(6px) translateY(-2px);
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.35),
-    0 0 60px rgba(99, 102, 241, 0.06);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(83, 58, 253, 0.2);
 }
 
 .scenario-card:hover .scenario-card__bar {
-  width: 6px;
-  top: 8px;
-  bottom: 8px;
+  width: 4px;
 }
 
 .scenario-card__icon {
-  font-size: 44px;
+  font-size: 40px;
   flex-shrink: 0;
-  transition: transform 0.35s ease;
-}
-
-.scenario-card:hover .scenario-card__icon {
-  transform: scale(1.1);
 }
 
 .scenario-card__content {
@@ -800,30 +614,31 @@ function statusLabel(status: TaskStatus): string {
 
 .scenario-card__title {
   font-size: 16px;
-  font-weight: 700;
-  color: #e2e8f0;
+  font-weight: 400;
+  color: var(--text-primary);
   margin: 0 0 4px;
 }
 
 .scenario-card__subtitle {
   font-size: 13px;
-  font-weight: 500;
-  color: #818cf8;
-  margin: 0 0 6px;
+  font-weight: 400;
+  color: var(--color-primary);
+  margin: 0 0 4px;
 }
 
 .scenario-card--color2 .scenario-card__subtitle {
-  color: #34d399;
+  color: var(--color-success);
 }
 
 .scenario-card--color3 .scenario-card__subtitle {
-  color: #c084fc;
+  color: #8b5cf6;
 }
 
 .scenario-card__desc {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.6;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--text-secondary);
+  line-height: 1.5;
   margin: 0;
 }
 
@@ -832,160 +647,102 @@ function statusLabel(status: TaskStatus): string {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #818cf8;
+  color: var(--color-primary);
   font-size: 14px;
-  font-weight: 600;
-  transition: color 0.3s ease;
+  font-weight: 400;
 }
 
 .scenario-card--color2 .scenario-card__action {
-  color: #34d399;
+  color: var(--color-success);
 }
 
 .scenario-card--color3 .scenario-card__action {
-  color: #c084fc;
+  color: #8b5cf6;
 }
 
 .scenario-card__arrow {
   display: inline-block;
-  transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+  transition: transform var(--transition-fast);
 }
 
 .scenario-card:hover .scenario-card__arrow {
-  transform: translateX(6px);
+  transform: translateX(4px);
 }
 
 /* ==================================================================
-   Modules — 2×3 网格 + 3D Hover
+   Modules — Stripe 卡片网格
    ================================================================== */
 
 .home-modules {
-  margin-bottom: 44px;
+  margin-bottom: 32px;
 }
 
 .module-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  gap: 16px;
 }
 
 .module-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 16px;
-  padding: 32px 20px 24px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 28px 20px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
   cursor: pointer;
   overflow: hidden;
 }
 
-/* 卡片渐变背景装饰 */
-.module-card__bg {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none;
-  border-radius: 16px;
-}
-
-.module-card--color1 .module-card__bg {
-  background: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12), transparent 70%);
-}
-
-.module-card--color2 .module-card__bg {
-  background: radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.12), transparent 70%);
-}
-
-.module-card--color3 .module-card__bg {
-  background: radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.12), transparent 70%);
-}
-
-.module-card:hover .module-card__bg {
-  opacity: 1;
-}
-
-/* 光泽扫过 */
+.module-card__bg,
 .module-card__shine {
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 60%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.04),
-    transparent
-  );
-  transform: skewX(-18deg);
-  pointer-events: none;
-}
-
-.module-card:hover .module-card__shine {
-  animation: shimmer 0.7s ease forwards;
+  display: none;
 }
 
 .module-card:hover {
-  transform: translateY(-10px) scale(1.03);
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.4),
-    0 0 80px rgba(99, 102, 241, 0.08);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(83, 58, 253, 0.2);
 }
 
 .module-icon {
   position: relative;
   z-index: 1;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .module-icon__inner {
-  font-size: 48px;
+  font-size: 42px;
   line-height: 1;
   display: block;
-  filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.3));
-  transition: transform 0.4s ease, filter 0.4s ease;
+  transition: transform var(--transition-fast);
 }
 
 .module-card:hover .module-icon__inner {
-  transform: scale(1.12);
-  filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.5));
+  transform: scale(1.08);
 }
 
 .module-name {
   position: relative;
   z-index: 1;
-  font-size: 16px;
-  font-weight: 700;
-  color: #e2e8f0;
-  margin: 0 0 6px;
-  letter-spacing: 0.5px;
-  transition: color 0.3s ease;
-}
-
-.module-card:hover .module-name {
-  color: #fff;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin: 0 0 4px;
 }
 
 .module-desc {
   position: relative;
   z-index: 1;
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.5;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--text-secondary);
+  line-height: 1.4;
   margin: 0;
-  transition: color 0.3s ease;
-}
-
-.module-card:hover .module-desc {
-  color: #94a3b8;
 }
 
 /* ==================================================================
@@ -993,44 +750,46 @@ function statusLabel(status: TaskStatus): string {
    ================================================================== */
 
 .home-dropzone {
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .dropzone-area {
-  border: 2px dashed rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  padding: 28px 24px;
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 24px;
   text-align: center;
-  transition: border-color 0.25s ease, background 0.25s ease;
-  background: rgba(255, 255, 255, 0.02);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  background: var(--bg-card);
   cursor: pointer;
 }
 
 .dropzone-area--active {
-  border-color: #6366f1;
-  background: rgba(99, 102, 241, 0.08);
+  border-color: var(--color-primary);
+  background: rgba(83, 58, 253, 0.04);
 }
 
 .dropzone-icon {
-  font-size: 42px;
+  font-size: 36px;
   line-height: 1;
   display: block;
   margin-bottom: 8px;
 }
 
 .dropzone-text {
-  font-size: 15px;
-  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 
 .dropzone-hint {
   font-size: 12px;
-  color: #475569;
+  font-weight: 300;
+  color: var(--text-secondary);
 }
 
 /* ==================================================================
-   Recent Items
+   Recent Items — Stripe
    ================================================================== */
 
 .home-recent {
@@ -1044,22 +803,21 @@ function statusLabel(status: TaskStatus): string {
 }
 
 .recent-item {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 10px;
+  background: var(--bg-card);
+  border-radius: 8px;
   padding: 14px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
   cursor: pointer;
 }
 
 .recent-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  transform: translateX(3px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(83, 58, 253, 0.2);
 }
 
 .recent-item__info {
@@ -1070,13 +828,14 @@ function statusLabel(status: TaskStatus): string {
 
 .recent-item__name {
   font-size: 14px;
-  font-weight: 600;
-  color: #e2e8f0;
+  font-weight: 400;
+  color: var(--text-primary);
 }
 
 .recent-item__module {
   font-size: 12px;
-  color: #64748b;
+  font-weight: 300;
+  color: var(--text-secondary);
 }
 
 .recent-item__meta {
@@ -1087,7 +846,8 @@ function statusLabel(status: TaskStatus): string {
 
 .recent-item__time {
   font-size: 12px;
-  color: #475569;
+  font-weight: 300;
+  color: var(--text-placeholder);
 }
 
 /* ==================================================================
@@ -1100,11 +860,11 @@ function statusLabel(status: TaskStatus): string {
   }
 
   .welcome-content {
-    padding: 32px 24px;
+    padding: 28px 24px;
   }
 
   .welcome-title {
-    font-size: 26px;
+    font-size: 24px;
   }
 
   .stats-grid {
@@ -1113,7 +873,7 @@ function statusLabel(status: TaskStatus): string {
 
   .module-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    gap: 12px;
   }
 }
 
@@ -1126,11 +886,11 @@ function statusLabel(status: TaskStatus): string {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
-    padding: 18px 20px;
+    padding: 16px 20px;
   }
 
   .scenario-card__icon {
-    font-size: 36px;
+    font-size: 32px;
   }
 
   .scenario-card__action {
