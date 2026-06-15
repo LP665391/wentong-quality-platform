@@ -8,44 +8,21 @@ directories:
   app: packages/app/main
 
 files:
-  # 主进程编译产物
   - dist/**/*
-  # 渲染进程（前端页面）- 复制到 app 目录
-  - "!../../renderer/node_modules/**"
-  - "!../../core/**"
-  - "!../../modules/**"
 
 extraResources:
-  # 渲染进程 dist
-  - from: ../renderer/dist
+  - from: ../../packages/app/renderer/dist
     to: renderer-dist
     filter:
       - "**/*"
-  # 各模块编译产物
   - from: ../../modules
     to: modules
     filter:
       - "*/dist/**"
-  # 核心库编译产物
   - from: ../../core
     to: core
     filter:
       - "*/dist/**"
-  - "!node_modules/**/*.{md,ts,map,flow}"
-  - "!node_modules/.cache/**"
-  - "!node_modules/**/docs/**"
-  - "!node_modules/**/test/**"
-  - "!node_modules/**/tests/**"
-  # 排除开发依赖减小包体积
-  - "!node_modules/typescript/**"
-  - "!node_modules/vite/**"
-  - "!node_modules/vitest/**"
-  - "!node_modules/vue-tsc/**"
-  - "!node_modules/eslint/**"
-  - "!node_modules/@types/**"
-  - "!node_modules/@vitejs/**"
-  - "!node_modules/@vitest/**"
-  - "!node_modules/@eslint/**"
 
 asar: true
 asarUnpack:
