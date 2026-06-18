@@ -2,6 +2,13 @@
   <div class="home">
     <!-- 欢迎横幅 -->
     <section class="home-welcome">
+      <!-- 试用激活提示 -->
+      <div v-if="isTrial" class="trial-activation-bar" @click="goActivation">
+        <span class="trial-activation-icon">🔑</span>
+        <span class="trial-activation-text">您正在使用试用版，点击此处激活正式授权</span>
+        <span class="trial-activation-arrow">→</span>
+      </div>
+      
       <div class="welcome-content">
         <!-- 动态光效装饰 -->
         <div class="welcome-glow welcome-glow--1"></div>
@@ -171,6 +178,39 @@ const taskStore = useTaskStore();
 const appStore = useAppStore();
 const { recentTasks } = storeToRefs(taskStore);
 
+// ---------------------------------------------------------------------------
+// 授权状态
+// ---------------------------------------------------------------------------
+const isTrial = ref(false);
+
+onMounted(async () => {
+  // 数字滚动动画
+  animateStats();
+  // 检查试用状态
+  await checkAuthStatus();
+});
+
+async function checkAuthStatus() {
+  try {
+    const api = (window as any).api;
+    const electronAPI = (window as any).electronAPI;
+    let status: any;
+    if (api?.invoke) {
+      status = await api.invoke('auth:getStatus');
+    } else if (electronAPI?.getAuthStatus) {
+      status = await electronAPI.getAuthStatus();
+    }
+    isTrial.value = !status?.activated && status?.trialActive;
+  } catch {
+    isTrial.value = false;
+  }
+}
+
+/** 跳转到激活页 */
+function goActivation() {
+  router.push('/activation');
+}
+
 /** 当前日期 */
 const currentDate = computed(() => {
   const d = new Date();
@@ -220,11 +260,6 @@ const modules = [
 // ---------------------------------------------------------------------------
 // 生命周期
 // ---------------------------------------------------------------------------
-
-onMounted(() => {
-  // 数字滚动动画
-  animateStats();
-});
 
 onUnmounted(() => {
   if (statsTimer) clearInterval(statsTimer);
@@ -365,6 +400,47 @@ function statusLabel(status: TaskStatus): string {
 
 .home-welcome {
   margin-bottom: 32px;
+}
+
+/* 试用激活提示横幅 */
+.trial-activation-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.trial-activation-bar:hover {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.trial-activation-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.trial-activation-text {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 400;
+  color: #92400e;
+}
+
+.trial-activation-arrow {
+  font-size: 16px;
+  color: #d97706;
+  transition: transform var(--transition-fast);
+}
+
+.trial-activation-bar:hover .trial-activation-arrow {
+  transform: translateX(4px);
 }
 
 .welcome-content {

@@ -42,7 +42,7 @@ export function generateDemoImage(width = 800, height = 600): Promise<string> {
     ctx.fillStyle = 'white';
     ctx.font = 'bold 48px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Ai质检 Demo', width / 2, height / 2 - 20);
+    ctx.fillText('智能档案管理 Demo', width / 2, height / 2 - 20);
 
     canvas.toBlob((blob) => {
       resolve(URL.createObjectURL(blob!));

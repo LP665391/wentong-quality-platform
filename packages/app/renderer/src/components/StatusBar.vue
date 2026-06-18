@@ -3,8 +3,11 @@
     <!-- 左侧：授权状态 + 演示模式 + 版本号 -->
     <div class="statusbar__left">
       <span class="statusbar__item">
-        <span class="status-indicator status-indicator--active" />
-        <span>已授权</span>
+        <span
+          class="status-indicator"
+          :class="authClass"
+        />
+        <span>{{ authLabel }}</span>
       </span>
       <span class="statusbar__divider">|</span>
       <span v-if="isBrowser && appStore.demoMode" class="statusbar__item">
@@ -63,6 +66,65 @@ const taskStore = useTaskStore();
 const isBrowser = computed(() => !(window as any).electronAPI && !(window as any).api);
 
 // ---------------------------------------------------------------------------
+// 授权状态
+// ---------------------------------------------------------------------------
+const authStatus = ref<'activated' | 'trial' | 'none'>('none');
+
+onMounted(async () => {
+  await refreshAuthStatus();
+  authTimer = setInterval(refreshAuthStatus, 60_000);
+});
+
+let authTimer: ReturnType<typeof setInterval> | null = null;
+
+onUnmounted(() => {
+  if (authTimer) clearInterval(authTimer);
+});
+
+async function refreshAuthStatus() {
+  try {
+    const api = (window as any).api;
+    const electronAPI = (window as any).electronAPI;
+    let status: any;
+
+    if (api?.invoke) {
+      status = await api.invoke('auth:getStatus');
+    } else if (electronAPI?.getAuthStatus) {
+      status = await electronAPI.getAuthStatus();
+    }
+
+    if (status?.activated) {
+      authStatus.value = 'activated';
+    } else if (status?.trialActive) {
+      authStatus.value = 'trial';
+    } else {
+      authStatus.value = 'none';
+    }
+  } catch {
+    // IPC 不可用时默认未激活
+    authStatus.value = 'none';
+  }
+}
+
+const authLabel = computed(() => {
+  const map: Record<string, string> = {
+    activated: '已授权',
+    trial: '试用中',
+    none: '未激活',
+  };
+  return map[authStatus.value] || '未激活';
+});
+
+const authClass = computed(() => {
+  const map: Record<string, string> = {
+    activated: 'status-indicator--active',
+    trial: 'status-indicator--trial',
+    none: '',
+  };
+  return map[authStatus.value] || '';
+});
+
+// ---------------------------------------------------------------------------
 // 当前时间（每 30 秒更新）
 // ---------------------------------------------------------------------------
 function formatTime(date: Date): string {
@@ -75,19 +137,16 @@ function formatTime(date: Date): string {
 }
 
 const currentTime = ref(formatTime(new Date()));
-let timer: ReturnType<typeof setInterval> | null = null;
+let timeTimer: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
-  timer = setInterval(() => {
+  timeTimer = setInterval(() => {
     currentTime.value = formatTime(new Date());
   }, 30_000);
 });
 
 onUnmounted(() => {
-  if (timer) {
-    clearInterval(timer);
-    timer = null;
-  }
+  if (timeTimer) clearInterval(timeTimer);
 });
 </script>
 
@@ -139,7 +198,7 @@ onUnmounted(() => {
   margin: 0 2px;
 }
 
-/* ---- 授权指示灯 — Stripe 绿色 ---- */
+/* ---- 授权指示灯 ---- */
 .status-indicator {
   width: 8px;
   height: 8px;
@@ -151,6 +210,17 @@ onUnmounted(() => {
 .status-indicator--active {
   background: var(--color-success);
   box-shadow: 0 0 4px rgba(16, 185, 129, 0.4);
+}
+
+.status-indicator--trial {
+  background: var(--color-warning);
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.4);
+  animation: trial-pulse 2s ease-in-out infinite;
+}
+
+@keyframes trial-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .status-indicator--demo {

@@ -2,7 +2,6 @@
   <div class="activation-page">
     <div class="activation-header">
       <h1>Ai 质检系统 — 软件授权激活</h1>
-      <p class="subtitle">连云港文安档案科技有限公司</p>
       <p class="subtitle" style="font-size:13px;color:#8c8c8c;margin-top:4px;">请选择激活方式以开始使用</p>
     </div>
 
@@ -51,14 +50,19 @@
         <!-- 试用 -->
         <el-card
           class="activation-card"
-          :class="{ selected: selectedMethod === 'trial' }"
+          :class="{ 
+            selected: selectedMethod === 'trial',
+            'activation-card--disabled': isCurrentTrial 
+          }"
           shadow="hover"
-          @click="selectedMethod = 'trial'"
+          @click="isCurrentTrial ? null : (selectedMethod = 'trial')"
         >
           <template #header>
             <div class="card-header">
               <el-icon :size="28"><Clock /></el-icon>
               <span>免费试用</span>
+              <el-tag v-if="isCurrentTrial" size="small" type="info" effect="dark">已试用</el-tag>
+              <el-tag v-else size="small" type="warning" effect="dark" class="trial-badge">⏳ 7天</el-tag>
             </div>
           </template>
           <p>开始 7 天全功能免费试用，无需任何授权码。到期后可购买正式授权。</p>
@@ -74,6 +78,17 @@
         >
           下一步
         </el-button>
+      </div>
+
+      <!-- 企业联系信息 -->
+      <div class="activation-footer">
+        <div class="activation-divider"></div>
+        <div class="activation-company">连云港文安档案科技有限公司</div>
+        <div class="activation-contact">
+          <span>📞 183 5281 1015</span>
+          <span class="activation-dot">·</span>
+          <span>董事长 刘婷</span>
+        </div>
       </div>
     </div>
 
@@ -200,11 +215,21 @@
             <div class="card-header">
               <el-icon :size="20"><Clock /></el-icon>
               <span>免费试用</span>
+              <el-tag size="small" type="warning" effect="dark">⏳ 7天倒计时</el-tag>
             </div>
           </template>
           <div class="trial-info">
-            <el-icon :size="48" color="#67c23a"><CircleCheckFilled /></el-icon>
+            <el-icon :size="48" color="#10b981"><CircleCheckFilled /></el-icon>
             <h3>7 天全功能免费试用</h3>
+            <div class="trial-countdown-preview">
+              <div class="trial-countdown-bar">
+                <div class="trial-countdown-fill" style="width: 100%"></div>
+              </div>
+              <div class="trial-countdown-label">
+                <span>剩余 <strong>7</strong> 天</span>
+                <span class="trial-countdown-hint">到期后可购买正式授权</span>
+              </div>
+            </div>
             <ul>
               <li>所有功能均可使用</li>
               <li>无使用次数限制</li>
@@ -263,52 +288,6 @@
         </template>
       </el-result>
     </div>
-
-    <!-- 已激活状态 -->
-    <div v-if="isAlreadyActivated" class="step-content">
-      <el-result icon="success" title="已激活">
-        <template #sub-title>
-          <div class="activated-info">
-            <el-descriptions :column="2" border size="large">
-              <el-descriptions-item label="客户名称">
-                {{ licenseInfo?.customerName }}
-              </el-descriptions-item>
-              <el-descriptions-item label="公司">
-                {{ licenseInfo?.company || '-' }}
-              </el-descriptions-item>
-              <el-descriptions-item label="许可证类型">
-                <el-tag :type="licenseInfo?.type === 'permanent' ? 'success' : 'warning'">
-                  {{ licenseInfo?.type === 'permanent' ? '永久授权' : '试用授权' }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="有效期">
-                {{ licenseInfo?.expireDate ?? '永久有效' }}
-              </el-descriptions-item>
-              <el-descriptions-item v-if="isTrialLicense" label="剩余天数" :span="2">
-                <div class="trial-countdown">
-                  <el-progress 
-                    :percentage="trialPercentage" 
-                    :color="trialProgressColor"
-                    :stroke-width="20"
-                    :text-inside="true"
-                    :format="() => `${trialRemainingDays} 天`"
-                  />
-                  <p class="trial-expire-tip" v-if="trialRemainingDays <= 7">
-                    ⚠️ 试用即将到期，请及时购买正式授权
-                  </p>
-                </div>
-              </el-descriptions-item>
-            </el-descriptions>
-          </div>
-        </template>
-        <template #extra>
-          <el-button type="primary" @click="enterApp">进入应用</el-button>
-          <el-button v-if="isTrialLicense && trialRemainingDays <= 7" type="warning" @click="showPurchaseDialog">
-            购买正式授权
-          </el-button>
-        </template>
-      </el-result>
-    </div>
   </div>
 </template>
 
@@ -333,6 +312,7 @@ const router = useRouter();
 
 const currentStep = ref(0);
 const selectedMethod = ref<'online' | 'offline' | 'trial' | null>(null);
+const isCurrentTrial = ref(false);
 const activatingOnline = ref(false);
 const activatingOffline = ref(false);
 const startingTrial = ref(false);
@@ -377,27 +357,27 @@ onMounted(async () => {
   // 获取机器 ID
   machineId.value = (await window.api?.invoke?.('auth:getMachineId') as unknown as string) ?? '无法获取';
 
-  // 检查激活状态
+  // 检查当前是否为试用状态（试用中隐藏试用卡片）
+  try {
+    const api = (window as any).api;
+    const electronAPI = (window as any).electronAPI;
+    let status: any;
+    if (api?.invoke) {
+      status = await api.invoke('auth:getStatus');
+    } else if (electronAPI?.getAuthStatus) {
+      status = await electronAPI.getAuthStatus();
+    }
+    isCurrentTrial.value = !status?.activated && status?.trialActive;
+  } catch {
+    isCurrentTrial.value = false;
+  }
+
+  // 检查激活状态 → 已激活直接进应用
   try {
     const status: any = await window.api?.invoke?.('auth:getStatus');
     if (status?.activated) {
-      isAlreadyActivated.value = true;
-      licenseInfo.value = status.licenseInfo;
-      
-      // 如果是试用授权，获取剩余天数
-      if (status.licenseInfo?.type === 'trial') {
-        const trialInfo: any = await window.api?.invoke?.('auth:getTrialInfo');
-        if (trialInfo) {
-          trialRemainingDays.value = trialInfo.remainingDays ?? 30;
-        }
-        // 启动定时器，每分钟更新一次
-        trialTimer = setInterval(async () => {
-          const info: any = await window.api?.invoke?.('auth:getTrialInfo');
-          if (info) {
-            trialRemainingDays.value = info.remainingDays ?? 30;
-          }
-        }, 60000);
-      }
+      router.push('/');
+      return;
     }
   } catch {
     // IPC 不可用时忽略
@@ -535,6 +515,16 @@ function retryActivation() {
   selectedFile.value = null;
 }
 
+/** 试用中 → 激活正式授权 */
+function goToActivation() {
+  activationResult.value = null;
+  isAlreadyActivated.value = false;
+  currentStep.value = 0;
+  selectedMethod.value = null;
+  selectedFile.value = null;
+  pasteContent.value = '';
+}
+
 function showPurchaseDialog() {
   ElMessageBox.alert(
     '试用期即将到期，请联系销售获取正式授权：<br/><br/>📞 183 5281 1015<br/>📧 连云港文安档案科技有限公司',
@@ -609,6 +599,18 @@ function showPurchaseDialog() {
 .activation-card:hover {
   box-shadow: var(--shadow-md);
   border-color: rgba(83, 58, 253, 0.2);
+}
+
+.activation-card--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.activation-card--disabled:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--border-color);
 }
 
 .activation-card.selected {
@@ -697,6 +699,50 @@ function showPurchaseDialog() {
   font-size: 18px;
 }
 
+/* 倒计时预览条 */
+.trial-countdown-preview {
+  max-width: 360px;
+  margin: 16px auto;
+  padding: 16px 20px;
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: 8px;
+}
+
+.trial-countdown-bar {
+  height: 8px;
+  background: rgba(16, 185, 129, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.trial-countdown-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.trial-countdown-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--text-regular);
+}
+
+.trial-countdown-label strong {
+  font-size: 20px;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.trial-countdown-hint {
+  font-size: 12px;
+  color: var(--text-placeholder);
+}
+
 /* 试用期倒计时 */
 .trial-countdown {
   width: 100%;
@@ -757,5 +803,39 @@ function showPurchaseDialog() {
   .activation-cards {
     grid-template-columns: 1fr;
   }
+}
+
+/* 底部企业联系信息 */
+.activation-footer {
+  margin-top: 48px;
+  text-align: center;
+}
+
+.activation-divider {
+  width: 40px;
+  height: 1px;
+  background: var(--border-color);
+  margin: 0 auto 16px;
+}
+
+.activation-company {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-regular);
+  margin-bottom: 6px;
+}
+
+.activation-contact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--text-secondary);
+}
+
+.activation-dot {
+  color: var(--text-placeholder);
 }
 </style>
