@@ -97,8 +97,8 @@ export function createMainWindow(): BrowserWindow {
   if (isDev()) {
     mainWindow.loadURL(DEV_SERVER_URL);
   } else {
-    // 生产环境加载 renderer 构建产物
-    const rendererPath = path.join(__dirname, '..', '..', 'renderer', 'dist', 'index.html');
+    // 生产环境加载 renderer 构建产物（从 extraResources 读取）
+    const rendererPath = path.join(process.resourcesPath, 'renderer-dist', 'index.html');
     mainWindow.loadFile(rendererPath);
   }
 
